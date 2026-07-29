@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#05070c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>E-TWOW</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#05070c; --plate:#0d1118; --edge:#1e2733;
+    --ice:#6fd8ff; --flux:#ffb03a; --halt:#ff4d6a; --mute:#6b7a8b; --text:#e6edf3;
+    --face:"Chakra Petch",system-ui,sans-serif;
+    --data:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; background:var(--void)}
+  body{
+    color:var(--text); font-family:var(--data); font-size:13px; line-height:1.45;
+    padding:max(16px,env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));
+    display:flex; justify-content:center; -webkit-font-smoothing:antialiased;
+  }
+  .shell{width:100%; max-width:440px}
+
+  /* ── barre de titre ───────────────────────────────────────── */
+  .bar{display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .mark{font-family:var(--face); font-weight:700; font-size:19px; letter-spacing:.22em}
+  .link{display:flex; align-items:center; gap:7px; font-size:10px; letter-spacing:.16em;
+        text-transform:uppercase; color:var(--mute)}
+  .pip{width:6px; height:6px; border-radius:50%; background:var(--halt); flex:none}
+  body.up .pip{background:var(--ice); box-shadow:0 0 9px var(--ice)}
+
+  /* ── cadran ───────────────────────────────────────────────── */
+  .dial{position:relative; margin:6px 0 2px}
+  .dial svg{display:block; width:100%; height:auto; overflow:visible}
+  .track{fill:none; stroke:var(--edge); stroke-width:7; stroke-linecap:butt}
+  .over{fill:none; stroke:var(--halt); stroke-width:7; opacity:.22}
+  .fill{fill:none; stroke:var(--ice); stroke-width:7; stroke-linecap:butt;
+        transition:stroke .35s ease}
+  body.over-limit .fill{stroke:var(--halt)}
+  .tick{stroke:var(--edge); stroke-width:1.5}
+  .tick.major{stroke:var(--mute); stroke-width:2}
+  .ticklabel{fill:var(--mute); font-family:var(--data); font-size:10px; text-anchor:middle}
+  .cap{stroke:var(--flux); stroke-width:3.5; stroke-linecap:round;
+       transition:transform .45s cubic-bezier(.3,1.2,.5,1); transform-origin:150px 150px}
+
+  .core{position:absolute; inset:0; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; pointer-events:none; padding-bottom:14px}
+  .kmh{font-family:var(--face); font-weight:600; font-size:clamp(50px,15vw,70px);
+       line-height:.9; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+  .unit{font-family:var(--face); font-size:11px; letter-spacing:.3em; color:var(--mute);
+        text-transform:uppercase; margin-top:3px}
+  .capnote{font-family:var(--data); font-size:11px; color:var(--flux); margin-top:9px;
+           letter-spacing:.05em}
+
+  /* ── relevés ──────────────────────────────────────────────── */
+  .reads{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:2px 0 14px}
+  .read{background:var(--plate); border:1px solid var(--edge); padding:9px 12px}
+  .read em{display:block; font-family:var(--face); font-style:normal; font-size:10px;
+           letter-spacing:.18em; text-transform:uppercase; color:var(--mute)}
+  .read b{font-family:var(--face); font-weight:600; font-size:25px;
+          font-variant-numeric:tabular-nums}
+  .read i{font-style:normal; font-size:11px; color:var(--mute); margin-left:3px}
+  .juice{height:2px; background:#111823; margin-top:7px}
+  .juice span{display:block; height:100%; width:0; background:var(--ice); transition:width .5s}
+  .read.flat .juice span{background:var(--halt)}
+
+  /* ── ruban du bus : les trames telles qu'elles arrivent ───── */
+  .bus{display:flex; align-items:center; gap:9px; background:var(--plate);
+       border:1px solid var(--edge); padding:8px 11px; margin-bottom:16px;
+       font-size:11px; overflow:hidden}
+  .bus b{font-family:var(--face); font-weight:600; font-size:9px; letter-spacing:.16em;
+         color:var(--mute); text-transform:uppercase; flex:none}
+  .bus code{color:var(--mute); white-space:nowrap; transition:color .12s}
+  .bus code.hit{color:var(--ice)}
+
+  /* ── commandes ────────────────────────────────────────────── */
+  h2{font-family:var(--face); font-weight:600; font-size:10px; letter-spacing:.22em;
+     text-transform:uppercase; color:var(--mute); margin:0 0 8px}
+  .grid{display:grid; gap:6px; margin-bottom:16px}
+  .grid.four{grid-template-columns:repeat(4,1fr)}
+  .grid.three{grid-template-columns:repeat(3,1fr)}
+  .grid.two{grid-template-columns:repeat(2,1fr)}
+  button{font-family:var(--face); font-weight:600; font-size:12px; letter-spacing:.08em;
+         color:var(--text); background:var(--plate); border:1px solid var(--edge);
+         padding:13px 8px; min-height:46px; cursor:pointer;
+         transition:border-color .15s,color .15s,background .15s}
+  button small{display:block; font-family:var(--data); font-weight:400; font-size:9px;
+               letter-spacing:0; color:var(--mute); margin-top:2px}
+  button:hover:not(:disabled){border-color:var(--ice); color:var(--ice)}
+  button:focus-visible{outline:2px solid var(--ice); outline-offset:2px}
+  button:disabled{opacity:.3; cursor:not-allowed}
+  button[aria-pressed="true"]{background:var(--ice); border-color:var(--ice); color:#04121a}
+  button[aria-pressed="true"] small{color:#0a3a4d}
+  button.key{background:var(--ice); border-color:var(--ice); color:#04121a}
+  button.bolt[aria-pressed="true"]{background:var(--halt); border-color:var(--halt); color:#1a0208}
+  button.bolt[aria-pressed="true"] small{color:#5c0d1c}
+
+  .notice{display:none; border:1px solid var(--halt); border-left-width:3px; border-radius:0;
+          background:#1a0509; color:#ffb3c0; padding:10px 12px; margin-bottom:14px;
+          font-size:12px; line-height:1.55}
+  .notice.show{display:block}
+  details{border-top:1px solid var(--edge); padding-top:11px}
+  summary{font-family:var(--face); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+          color:var(--mute); cursor:pointer; list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"› "; color:var(--ice)}
+  details[open] summary::before{content:"⌄ "}
+  .log{background:#03050a; border:1px solid var(--edge); height:140px; overflow-y:auto;
+       padding:8px 10px; font-size:10.5px; color:var(--mute); white-space:pre-wrap;
+       word-break:break-all; margin-top:9px}
+  .log .bad{color:var(--halt)} .log .out{color:var(--flux)}
+  .foot{font-size:10.5px; color:var(--mute); margin:8px 0 0}
+
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="bar">
+    <div class="mark">E-TWOW</div>
+    <div class="link"><span class="pip"></span><span id="link">hors ligne</span></div>
+  </div>
+
+  <div class="dial">
+    <svg viewBox="0 0 300 268" role="img" aria-label="Cadran de vitesse">
+      <path class="track" id="track" d="M 66.6 233.4 A 118 118 0 1 1 233.4 233.4"></path>
+      <path class="over"  id="over"  d="M 66.6 233.4 A 118 118 0 1 1 233.4 233.4"></path>
+      <path class="fill"  id="fill"  d="M 66.6 233.4 A 118 118 0 1 1 233.4 233.4"></path>
+      <g id="ticks"></g>
+      <line class="cap" id="cap" x1="150" y1="24" x2="150" y2="40"></line>
+    </svg>
+    <div class="core">
+      <div class="kmh" id="kmh">0.0</div>
+      <div class="unit">km/h</div>
+      <div class="capnote" id="capnote">—</div>
+    </div>
+  </div>
+
+  <div class="reads">
+    <div class="read" id="battbox">
+      <em>Batterie</em><b id="batt">—</b><i>%</i>
+      <div class="juice"><span id="juice"></span></div>
+    </div>
+    <div class="read">
+      <em>Odomètre</em><b id="odo">—</b><i>km</i>
+      <div class="juice"><span style="width:100%;background:#1e2733"></span></div>
+    </div>
+  </div>
+
+  <div class="bus">
+    <b>bus</b><code id="bus">en attente</code>
+  </div>
+
+  <h2>Bridage</h2>
+  <div class="grid four" id="modes">
+    <button data-mode="1">L1<small>6</small></button>
+    <button data-mode="2">L2<small>20</small></button>
+    <button data-mode="3">L3<small>25</small></button>
+    <button data-mode="0">L0<small>libre</small></button>
+  </div>
+
+  <h2>Commandes</h2>
+  <div class="grid three">
+    <button id="btn-lamp" data-toggle="lamp">Phare<small>—</small></button>
+    <button id="btn-zero" data-toggle="zero">Départ<small>—</small></button>
+    <button id="btn-lock" data-toggle="lock" class="bolt">Verrou<small>—</small></button>
+  </div>
+
+  <div class="notice" id="notice"></div>
+
+  <div class="grid two">
+    <button class="key" id="connect">Connecter</button>
+    <button id="disconnect" disabled>Déconnecter</button>
+  </div>
+
+  <div class="grid two">
+    <button id="trip">Trajet à zéro</button>
+    <button id="clear">Vider le journal</button>
+  </div>
+
+  <details>
+    <summary>Journal</summary>
+    <div class="log" id="log">Connecte-toi pour voir passer les trames.</div>
+    <p class="foot" id="foot">Bits non identifiés : —</p>
+  </details>
+
+</div>
+
+<script>
+/* ══ Protocole E-TWOW ══════════════════════════════════════════════════
+   Module HM-10 : une seule caractéristique porte les deux sens.
+   Écriture      0x55 REG 0x05 VAL CKS
+   Notification  REG DATA… CKS        CKS = somme des octets précédents mod 256
+   Registre 0x03 en lecture est un champ de bits :
+     bits 0-1 bridage · bit 4 phare · bit 5 verrou · bit 7 zero start
+   ═══════════════════════════════════════════════════════════════════ */
+const SERVICE = '0000ffe0-0000-1000-8000-00805f9b34fb';
+const CHAR    = '0000ffe1-0000-1000-8000-00805f9b34fb';
+const REG = { speed:2, zero:3, lock:5, lamp:6, trip:9 };
+const SCALE_MAX = 45;                      // pleine échelle du cadran, en km/h
+const CAPS = { 0:41, 1:6, 2:20, 3:25 };    // L0 mesuré à 41 km/h sur GTS 700W
+const ARC = 2 * Math.PI * 118 * 0.75;      // longueur de l'arc de 270°
+
+const $ = id => document.getElementById(id);
+let dev = null, chr = null, status = null, shown = 0, sweeping = false;
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const hex = b => b.toString(16).toUpperCase().padStart(2, '0');
+
+/* ── graduations ─────────────────────────────────────────────────── */
+(function ticks() {
+  const g = $('ticks'), ns = 'http://www.w3.org/2000/svg';
+  for (let v = 0; v <= SCALE_MAX; v += 5) {
+    const a = (135 + (v / SCALE_MAX) * 270) * Math.PI / 180;
+    const major = v % 10 === 0;
+    const r1 = major ? 100 : 106, r2 = 112;
+    const ln = document.createElementNS(ns, 'line');
+    ln.setAttribute('x1', 150 + r1 * Math.cos(a)); ln.setAttribute('y1', 150 + r1 * Math.sin(a));
+    ln.setAttribute('x2', 150 + r2 * Math.cos(a)); ln.setAttribute('y2', 150 + r2 * Math.sin(a));
+    ln.setAttribute('class', 'tick' + (major ? ' major' : ''));
+    g.appendChild(ln);
+    if (major) {
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', 150 + 86 * Math.cos(a));
+      t.setAttribute('y', 150 + 86 * Math.sin(a) + 3.5);
+      t.setAttribute('class', 'ticklabel'); t.textContent = v;
+      g.appendChild(t);
+    }
+  }
+  $('track').style.strokeDasharray = ARC;
+  $('fill').style.strokeDasharray = ARC;
+  $('fill').style.strokeDashoffset = ARC;
+})();
+
+function paintSpeed(kmh) {
+  const f = Math.max(0, Math.min(1, kmh / SCALE_MAX));
+  $('fill').style.strokeDashoffset = ARC * (1 - f);
+  $('kmh').textContent = kmh.toFixed(1);
+  const cap = status === null ? SCALE_MAX : CAPS[status & 0b11];
+  document.body.classList.toggle('over-limit', kmh > cap + 0.4);
+}
+
+/* Le repère orange marque la limite du mode courant ; la zone au-delà
+   se teinte en rouge sourd. C'est le sujet même de l'instrument. */
+function paintCap(mode) {
+  const cap = CAPS[mode], f = cap / SCALE_MAX;
+  $('cap').style.transform = `rotate(${(f * 270) - 135}deg)`;
+  $('over').style.strokeDasharray = `0 ${ARC * f} ${ARC * (1 - f)} ${ARC}`;
+  $('capnote').textContent = mode === 0 ? 'L0 · libre, ~41 km/h'
+                                        : `L${mode} · plafond ${cap} km/h`;
+}
+
+function log(msg, cls) {
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = new Date().toLocaleTimeString('fr-BE') + '  ' + msg;
+  $('log').appendChild(d);
+  while ($('log').childNodes.length > 250) $('log').removeChild($('log').firstChild);
+  $('log').scrollTop = $('log').scrollHeight;
+}
+
+function applyStatus(v) {
+  if (status !== null && v !== status) {
+    const diff = v ^ status;
+    const bits = [...Array(8).keys()].filter(i => diff >> i & 1).map(i => 'bit' + i);
+    log(`état 0x${hex(status)} → 0x${hex(v)}   ${bits.join(', ')}`, 'out');
+  }
+  status = v;
+  const mode = v & 0b11, lamp = !!(v & 0x10), lock = !!(v & 0x20), zero = !(v & 0x80);
+  paintCap(mode);
+
+  document.querySelectorAll('#modes button').forEach(b =>
+    b.setAttribute('aria-pressed', +b.dataset.mode === mode));
+
+  const set = (id, on, yes, no) => {
+    const b = $(id);
+    b.setAttribute('aria-pressed', on);
+    b.querySelector('small').textContent = on ? yes : no;
+  };
+  set('btn-lamp', lamp, 'allumé', 'éteint');
+  set('btn-zero', zero, 'impulsion', 'direct');
+  set('btn-lock', lock, 'bloqué', 'libre');
+
+  const rest = v & 0b01001100;
+  $('foot').textContent = 'Bits non identifiés : ' +
+    (rest ? '0b' + rest.toString(2).padStart(8, '0') : 'aucun actif');
+}
+
+function onFrame(d) {
+  if (d.length < 3) return;
+  if ((d.slice(0, -1).reduce((a, b) => a + b, 0) & 0xFF) !== d[d.length - 1]) {
+    log('checksum invalide  ' + [...d].map(hex).join(' '), 'bad'); return;
+  }
+  const reg = d[0], pl = d.slice(1, -1), u16 = pl[0] | (pl[1] << 8);
+
+  $('bus').textContent = [...d].map(hex).join(' ');
+  $('bus').classList.add('hit');
+  setTimeout(() => $('bus').classList.remove('hit'), 110);
+
+  if (reg === 0x01) { if (!sweeping) paintSpeed(u16 / 10); }
+  else if (reg === 0x02) {
+    $('batt').textContent = u16;
+    $('juice').style.width = Math.min(100, u16) + '%';
+    $('battbox').classList.toggle('flat', u16 <= 20);
+  }
+  else if (reg === 0x03) applyStatus(u16);
+  else if (reg === 0x04) $('odo').textContent = (u16 / 10).toFixed(1);
+  else if (reg === 0x05) { if (!shown++) log('code contrôleur : ' + new TextDecoder().decode(pl)); }
+  else log('registre inconnu 0x' + hex(reg) + '  ' + [...d].map(hex).join(' '));
+}
+
+/* Balayage d'aiguille à la connexion, comme un tableau de bord à l'allumage. */
+function sweep() {
+  if (calm) return;
+  sweeping = true;
+  const t0 = performance.now(), span = 1100;
+  (function step(now) {
+    const p = Math.min(1, (now - t0) / span);
+    const eased = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    paintSpeed(SCALE_MAX * Math.sin(eased * Math.PI));
+    if (p < 1) requestAnimationFrame(step);
+    else { sweeping = false; paintSpeed(0); }
+  })(t0);
+}
+
+function setUp(on) {
+  document.body.classList.toggle('up', on);
+  $('link').textContent = on ? 'en ligne' : 'hors ligne';
+  $('connect').disabled = on; $('disconnect').disabled = !on;
+  document.querySelectorAll('#modes button, [data-toggle], #trip')
+    .forEach(b => b.disabled = !on);
+  if (!on) { status = null; document.body.classList.remove('over-limit'); }
+}
+
+async function write(reg, val) {
+  const body = [0x55, reg, 0x05, val];
+  const frame = Uint8Array.from([...body, body.reduce((a, b) => a + b, 0) & 0xFF]);
+  await chr.writeValueWithoutResponse(frame);
+  log('envoi  ' + [...frame].map(hex).join(' '), 'out');
+}
+
+function alerte(html) {
+  const n = $('notice');
+  n.innerHTML = html;
+  n.classList.add('show');
+}
+
+/* Le motif d'échec le plus courant n'est pas un bug mais un contexte
+   inadapté : navigateur sans Web Bluetooth, ou page ouverte en file://.
+   On le nomme explicitement plutôt que de laisser le bouton paraître mort. */
+function diagnostic() {
+  const p = location.protocol;
+  if (p === 'file:')
+    return 'Page ouverte en <code>file://</code>. Web Bluetooth exige un contexte sécurisé : '
+         + 'lance <code>python3 -m http.server 8000</code> dans le dossier, puis ouvre '
+         + '<code>http://localhost:8000/etwow-hud.html</code>.';
+  if (!navigator.bluetooth) {
+    const ff = /firefox/i.test(navigator.userAgent);
+    const ios = /iPhone|iPad/.test(navigator.userAgent);
+    if (ff) return 'Firefox n\'implémente pas Web Bluetooth, sur aucune plateforme. '
+               + 'Ouvre cette page dans Chrome, Edge ou Brave.';
+    if (ios) return 'Sur iOS, aucun navigateur de l\'App Store ne gère Web Bluetooth. '
+               + 'Utilise l\'application Bluefy.';
+    return 'Ce navigateur ne gère pas Web Bluetooth. Chrome, Edge ou Brave conviennent.';
+  }
+  return null;
+}
+
+$('connect').addEventListener('click', async () => {
+  const souci = diagnostic();
+  if (souci) { alerte(souci); log('connexion impossible', 'bad'); return; }
+  $('notice').classList.remove('show');
+  try {
+    dev = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [SERVICE] }], optionalServices: [SERVICE]
+    });
+    /* Chrome renvoie le même objet d'une connexion à l'autre : sans { once },
+       l'écouteur s'empilerait et chaque perte de liaison serait consignée n fois. */
+    dev.addEventListener('gattserverdisconnected', () => {
+      setUp(false); log('liaison perdue', 'bad');
+    }, { once: true });
+    const srv = await (await dev.gatt.connect()).getPrimaryService(SERVICE);
+    chr = await srv.getCharacteristic(CHAR);
+    await chr.startNotifications();
+    chr.addEventListener('characteristicvaluechanged',
+      e => onFrame(new Uint8Array(e.target.value.buffer)));
+    setUp(true); shown = 0; sweep();
+    log('connecté à ' + (dev.name || 'la trottinette'));
+  } catch (e) { log(e.message, 'bad'); }
+});
+
+$('disconnect').addEventListener('click', () => {
+  if (dev?.gatt?.connected) dev.gatt.disconnect();
+  setUp(false); log('déconnecté');
+});
+
+document.querySelectorAll('#modes button').forEach(b => {
+  b.disabled = true;
+  b.addEventListener('click', () => write(REG.speed, +b.dataset.mode));
+});
+
+/* Les bascules lisent l'état courant plutôt que de compter leurs propres clics :
+   l'affichage ne bougera qu'une fois la trottinette confirmée via 0x03. */
+document.querySelectorAll('[data-toggle]').forEach(b => {
+  b.disabled = true;
+  b.addEventListener('click', () => {
+    if (status === null) return;
+    const kind = b.dataset.toggle;
+    if (kind === 'lamp') write(REG.lamp, status & 0x10 ? 0 : 1);
+    if (kind === 'zero') write(REG.zero, status & 0x80 ? 0 : 1);
+    if (kind === 'lock') {
+      if (status & 0x20) write(REG.lock, 0);
+      else if (confirm('Verrouiller le moteur ? La puissance est coupée immédiatement.'))
+        write(REG.lock, 1);
+    }
+  });
+});
+
+$('trip').disabled = true;
+$('trip').addEventListener('click', () => write(REG.trip, 0));
+$('clear').addEventListener('click', () => { $('log').textContent = ''; });
+</script>
+</body>
+</html>
