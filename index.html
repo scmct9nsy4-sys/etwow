@@ -28,77 +28,70 @@ body[data-theme="day"]{
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 html,body{background:var(--bg);height:100%;overflow:hidden}
 body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:background .4s,color .4s}
-#app>div,.card,.switch{transition:background .4s,border-color .4s}
-#app{position:fixed;inset:0;display:grid;
-  grid-template-rows:46px 1fr;
-  grid-template-columns:150px 1fr 196px;
-  grid-template-areas:"top top top" "left dial right";
-  gap:8px;
-  padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
-}
-@media (orientation:portrait){
-  #app{width:100vh;height:100vw;position:absolute;top:0;left:100vw;transform:rotate(90deg);transform-origin:left top}
-}
+.tile,.switch,#top,#dial{transition:background .4s,border-color .4s}
+
+#app{position:fixed;inset:0;display:flex;flex-direction:column;gap:8px;
+  padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));}
+#main{flex:1;min-height:0;display:flex;gap:8px}
 
 /* ---------- bandeau supérieur ---------- */
-#top{grid-area:top;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 12px}
-#brand{font-family:'Chakra Petch';font-weight:700;font-size:15px;letter-spacing:.14em;color:var(--dim);outline:none;border-radius:5px;padding:2px 5px;cursor:text;max-width:140px;white-space:nowrap;overflow:hidden}
+#top{flex:0 0 46px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 12px}
+#brand{font-family:'Chakra Petch';font-weight:700;font-size:15px;letter-spacing:.14em;color:var(--dim);outline:none;border-radius:5px;padding:2px 5px;cursor:text;max-width:150px;white-space:nowrap;overflow:hidden;flex-shrink:0}
 #brand:focus{color:var(--txt);background:var(--panel2);box-shadow:0 0 0 1.5px var(--line2)}
-#telltales{display:flex;gap:14px;margin-left:auto;align-items:center}
-.tt{width:30px;height:30px;display:flex;align-items:center;justify-content:center;opacity:.22;transition:opacity .25s,filter .25s}
-.tt svg{width:24px;height:24px}
+#lastev{flex:1;min-width:0;font-size:11px;color:var(--faint);letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+#telltales{display:flex;gap:13px;align-items:center;flex-shrink:0}
+.tt{width:28px;height:28px;display:flex;align-items:center;justify-content:center;opacity:.22;transition:opacity .25s,filter .25s}
+.tt svg{width:23px;height:23px}
 .tt.on{opacity:1;filter:drop-shadow(0 0 6px currentColor)}
 #tt-beam{color:var(--amber)} #tt-lock{color:var(--red)} #tt-zs{color:var(--teal)} #tt-ble{color:var(--blue)}
-#btn-connect{font-family:'Chakra Petch';font-weight:700;font-size:14px;letter-spacing:.08em;background:var(--amber);color:var(--on-amber);border:none;border-radius:9px;padding:8px 16px;cursor:pointer}
+#btn-connect{font-family:'Chakra Petch';font-weight:700;font-size:14px;letter-spacing:.08em;background:var(--amber);color:var(--on-amber);border:none;border-radius:9px;padding:8px 15px;cursor:pointer;flex-shrink:0}
 #btn-connect.linked{background:transparent;color:var(--dim);border:1px solid var(--line);font-weight:500}
-#btn-theme{width:40px;height:34px;border-radius:9px;border:1.5px solid var(--line2);background:var(--panel2);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;font-family:'Chakra Petch';font-weight:700;font-size:11px}
+#btn-theme{width:40px;height:34px;border-radius:9px;border:1.5px solid var(--line2);background:var(--panel2);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Chakra Petch';font-weight:700;font-size:11px;flex-shrink:0}
 #btn-theme svg{width:17px;height:17px}
 
-/* ---------- colonne gauche ---------- */
-#left{grid-area:left;display:flex;flex-direction:column;gap:8px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
-.lbl{font-size:12px;font-weight:600;letter-spacing:.18em;color:var(--dim)}
-#battcard{flex:1;display:flex;flex-direction:column}
-#battwrap{flex:1;display:flex;gap:10px;align-items:stretch;margin-top:8px}
-#battgauge{width:26px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);position:relative;overflow:hidden}
-#battfill{position:absolute;bottom:0;left:0;right:0;height:0%;background:var(--teal);transition:height .6s,background .6s}
-#battpct{font-family:'Chakra Petch';font-weight:700;font-size:30px;align-self:flex-end}
-#battpct small{font-size:14px;color:var(--dim)}
-#odocard .val{font-family:'Chakra Petch';font-weight:700;font-size:22px;margin-top:4px}
-#odocard .val small{font-size:12px;color:var(--dim);font-weight:500}
-#btn-trip{margin-top:8px;width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-family:'Barlow Condensed';font-weight:600;font-size:13px;letter-spacing:.1em;border-radius:8px;padding:7px 0;cursor:pointer}
+/* ---------- tuiles d'info (batterie, total, trip, temp) ---------- */
+#stats{display:flex;gap:8px;flex:0 0 152px;flex-direction:column;min-height:0}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 11px;display:flex;flex-direction:column;justify-content:center;gap:3px;position:relative;overflow:hidden;min-width:0;flex:1}
+#battcard{flex:1.5}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.16em;color:var(--dim)}
+.big{font-family:'Chakra Petch';font-weight:700;font-size:clamp(19px,4.3vmin,27px);line-height:1;white-space:nowrap}
+.big small{font-size:.5em;color:var(--dim);margin-left:3px;font-family:'Barlow Condensed';font-weight:500}
+.bar{height:8px;border-radius:5px;background:var(--panel2);overflow:hidden;margin-top:4px}
+#battfill{height:100%;width:0%;background:var(--teal);transition:width .6s,background .6s}
+#btn-trip{position:absolute;top:7px;right:7px;font-size:10px;font-weight:700;letter-spacing:.08em;background:var(--panel2);border:1px solid var(--line2);color:var(--dim);border-radius:6px;padding:3px 7px;cursor:pointer;font-family:'Chakra Petch'}
 #btn-trip:active{color:var(--txt);border-color:var(--dim)}
+#tempcard .big{color:var(--dim)}
 
 /* ---------- cadran central ---------- */
-#dial{grid-area:dial;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
-#gauge{height:82%;max-height:300px;aspect-ratio:1}
-#speeddigits{position:absolute;left:50%;top:57%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
-#speedval{font-family:'Chakra Petch';font-weight:700;font-size:64px;line-height:1;letter-spacing:-.02em}
-#speedunit{font-size:15px;font-weight:600;letter-spacing:.28em;color:var(--dim)}
-#modes{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:5px}
-.mode{width:58px;padding:6px 0;border-radius:8px;border:none;background:transparent;color:var(--dim);font-family:'Chakra Petch';font-weight:700;font-size:15px;cursor:pointer;line-height:1.1}
+#dial{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;padding:6px 8px 8px}
+#gaugewrap{position:relative;flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
+#gauge{height:100%;max-height:100%;aspect-ratio:1;max-width:100%}
+#speeddigits{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+#speedval{font-family:'Chakra Petch';font-weight:700;font-size:clamp(46px,13vmin,88px);line-height:1;letter-spacing:-.02em}
+#speedunit{font-size:clamp(12px,2.4vmin,16px);font-weight:600;letter-spacing:.28em;color:var(--dim)}
+#modes{display:flex;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:5px;margin-top:2px;flex-shrink:0}
+.mode{width:60px;padding:6px 0;border-radius:8px;border:none;background:transparent;color:var(--dim);font-family:'Chakra Petch';font-weight:700;font-size:15px;cursor:pointer;line-height:1.1}
 .mode small{display:block;font-family:'Barlow Condensed';font-weight:500;font-size:10.5px;letter-spacing:.05em;color:var(--faint)}
 .mode.on{background:var(--amber);color:var(--on-amber)}
 .mode.on small{color:var(--on-amber-dim)}
-#overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 84%,transparent);display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;backdrop-filter:blur(3px);cursor:pointer}
+#overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 84%,transparent);display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;backdrop-filter:blur(3px);cursor:pointer;z-index:5}
 #overlay.hide{display:none}
 #overlay p{font-size:15px;color:var(--dim);letter-spacing:.06em}
 #btn-big{font-family:'Chakra Petch';font-weight:700;font-size:18px;letter-spacing:.1em;background:var(--amber);color:var(--on-amber);border:none;border-radius:12px;padding:16px 34px;cursor:pointer}
 
-/* ---------- colonne droite : interrupteurs ---------- */
-#right{grid-area:right;display:flex;flex-direction:column;gap:8px}
-.switch{flex:1;display:flex;align-items:center;gap:12px;background:var(--panel);border:1.5px solid var(--line2);border-radius:12px;padding:0 14px;cursor:pointer;position:relative;overflow:hidden}
+/* ---------- interrupteurs ---------- */
+#switches{display:flex;gap:8px;flex:0 0 132px;flex-direction:column;min-height:0}
+.switch{flex:1;display:flex;align-items:center;gap:10px;background:var(--panel);border:1.5px solid var(--line2);border-radius:12px;padding:0 12px;cursor:pointer;position:relative;overflow:hidden;min-width:0;min-height:0}
 .switch:active{background:var(--panel2)}
-.switch .ic{width:34px;height:34px;color:var(--dim);flex-shrink:0;transition:color .25s,filter .25s}
+.switch .ic{width:30px;height:30px;color:var(--dim);flex-shrink:0;transition:color .25s,filter .25s}
 .switch .ic svg{width:100%;height:100%}
-.switch .tx{display:flex;flex-direction:column;gap:2px}
-.switch .tx b{font-size:17px;font-weight:600;letter-spacing:.08em}
-.switch .tx span{font-size:12.5px;letter-spacing:.12em;color:var(--dim);font-weight:500}
+.switch .tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.switch .tx b{font-size:15px;font-weight:600;letter-spacing:.06em;white-space:nowrap}
+.switch .tx span{font-size:11.5px;letter-spacing:.1em;color:var(--dim);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .switch .led{position:absolute;right:0;top:0;bottom:0;width:6px;background:var(--faint);transition:background .25s,box-shadow .25s}
 .switch.on .led{box-shadow:0 0 10px currentColor}
 #sw-lamp.on{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,var(--panel))}
-#sw-lamp.on .ic,#sw-lamp.on .led{color:var(--amber);background:var(--amber)}
-#sw-lamp.on .ic{background:transparent}
+#sw-lamp.on .ic{color:var(--amber)} #sw-lamp.on .led{background:var(--amber);color:var(--amber)}
 #sw-zs.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 12%,var(--panel))}
 #sw-zs.on .ic{color:var(--teal)} #sw-zs.on .led{background:var(--teal);color:var(--teal)}
 #sw-lock.on{border-color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--panel))}
@@ -106,7 +99,22 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 #holdbar{position:absolute;left:0;bottom:0;height:3px;width:0%;background:var(--red)}
 .switch[disabled]{opacity:.4;pointer-events:none}
 
-#lastev{position:absolute;left:14px;bottom:8px;font-size:11.5px;color:var(--faint);letter-spacing:.05em;max-width:46%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* =================================================================
+   PORTRAIT : cadran en haut et pleine largeur, infos et interrupteurs
+   en rangées dessous. C'est l'affichage « en main », hors conduite.
+   ================================================================= */
+@media (orientation:portrait){
+  #main{flex-direction:column}
+  #dial{order:-1;flex:1}
+  #stats{flex:0 0 auto;flex-direction:row}
+  #stats .tile,#battcard{flex:1}
+  #switches{flex:0 0 auto;flex-direction:row}
+  #lastev{display:none}
+  .switch{flex-direction:column;justify-content:center;gap:4px;padding:10px 6px}
+  .switch .tx{align-items:center;text-align:center}
+  .switch .led{left:0;right:0;top:auto;bottom:0;width:auto;height:5px}
+  .big{font-size:clamp(17px,5vmin,24px)}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -115,6 +123,7 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 
   <div id="top">
     <span id="brand" contenteditable="true" spellcheck="false" title="Touche pour renommer">ETWOW GI</span>
+    <span id="lastev"></span>
     <div id="telltales">
       <div class="tt" id="tt-beam" title="Phare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 5c4 0 7 3.1 7 7s-3 7-7 7c-2.5 0-4-1.5-4-3.5v-7C10 6.5 11.5 5 14 5Z"/><path d="M2 7h6M2 12h6M2 17h6"/></svg></div>
       <div class="tt" id="tt-zs" title="Départ direct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></div>
@@ -125,64 +134,78 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
     <button id="btn-connect">Connecter</button>
   </div>
 
-  <div id="left">
-    <div class="card" id="battcard">
-      <span class="lbl">Batterie</span>
-      <div id="battwrap">
-        <div id="battgauge"><div id="battfill"></div></div>
-        <div id="battpct">--<small> %</small></div>
+  <div id="main">
+
+    <div id="stats">
+      <div class="tile" id="battcard">
+        <span class="lbl">BATTERIE</span>
+        <div class="big" id="battpct">--<small>%</small></div>
+        <div class="bar"><div id="battfill"></div></div>
+      </div>
+      <div class="tile" id="totalcard">
+        <span class="lbl">TOTAL</span>
+        <div class="big" id="totalval">--<small>km</small></div>
+      </div>
+      <div class="tile" id="tripcard">
+        <span class="lbl">TRIP</span>
+        <div class="big" id="tripval">--<small>km</small></div>
+        <button id="btn-trip" title="Remettre le trip à zéro">RAZ</button>
+      </div>
+      <div class="tile" id="tempcard" title="Aucun capteur de température n'est diffusé en Bluetooth sur cet engin">
+        <span class="lbl">TEMP</span>
+        <div class="big" id="tempval">--<small>°C</small></div>
       </div>
     </div>
-    <div class="card" id="odocard">
-      <span class="lbl">Odomètre</span>
-      <div class="val" id="odoval">--,- <small>km</small></div>
-      <button id="btn-trip">RAZ partiel</button>
-    </div>
-  </div>
 
-  <div id="dial">
-    <svg id="gauge" viewBox="0 0 400 400"></svg>
-    <div id="speeddigits">
-      <div id="speedval">--</div>
-      <div id="speedunit">KM/H</div>
+    <div id="dial">
+      <div id="gaugewrap">
+        <svg id="gauge" viewBox="0 0 400 400"></svg>
+        <div id="speeddigits">
+          <div id="speedval">--</div>
+          <div id="speedunit">KM/H</div>
+        </div>
+      </div>
+      <div id="modes">
+        <button class="mode" data-m="0">L0<small>41 max</small></button>
+        <button class="mode" data-m="1">L1<small>6 max</small></button>
+        <button class="mode" data-m="2">L2<small>20 max</small></button>
+        <button class="mode" data-m="3">L3<small>25 max</small></button>
+      </div>
+      <div id="overlay">
+        <p>Trottinette non connectée</p>
+        <button id="btn-big">Touchez pour connecter</button>
+        <p id="ovmsg" style="color:var(--red);max-width:80%;text-align:center;font-size:14px"></p>
+      </div>
     </div>
-    <div id="modes">
-      <button class="mode" data-m="0">L0<small>41 max</small></button>
-      <button class="mode" data-m="1">L1<small>6 max</small></button>
-      <button class="mode" data-m="2">L2<small>20 max</small></button>
-      <button class="mode" data-m="3">L3<small>25 max</small></button>
-    </div>
-    <span id="lastev"></span>
-    <div id="overlay">
-      <p>Trottinette non connectée</p>
-      <button id="btn-big">Touchez pour connecter</button>
-      <p id="ovmsg" style="color:var(--red);max-width:80%;text-align:center;font-size:14px"></p>
-    </div>
-  </div>
 
-  <div id="right">
-    <div class="switch" id="sw-lamp" disabled>
-      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 5c4 0 7 3.1 7 7s-3 7-7 7c-2.5 0-4-1.5-4-3.5v-7C10 6.5 11.5 5 14 5Z"/><path d="M2 7h6M2 12h6M2 17h6"/></svg></div>
-      <div class="tx"><b>Phare</b><span id="st-lamp">éteint</span></div>
-      <div class="led"></div>
+    <div id="switches">
+      <div class="switch" id="sw-lamp" disabled>
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 5c4 0 7 3.1 7 7s-3 7-7 7c-2.5 0-4-1.5-4-3.5v-7C10 6.5 11.5 5 14 5Z"/><path d="M2 7h6M2 12h6M2 17h6"/></svg></div>
+        <div class="tx"><b>Phare</b><span id="st-lamp">éteint</span></div>
+        <div class="led"></div>
+      </div>
+      <div class="switch" id="sw-zs" disabled>
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></div>
+        <div class="tx"><b>Départ</b><span id="st-zs">--</span></div>
+        <div class="led"></div>
+      </div>
+      <div class="switch" id="sw-lock" disabled>
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+        <div class="tx"><b>Verrou</b><span id="st-lock">libre</span></div>
+        <div class="led"></div>
+        <div id="holdbar"></div>
+      </div>
     </div>
-    <div class="switch" id="sw-zs" disabled>
-      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></div>
-      <div class="tx"><b>Départ</b><span id="st-zs">--</span></div>
-      <div class="led"></div>
-    </div>
-    <div class="switch" id="sw-lock" disabled>
-      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
-      <div class="tx"><b>Verrou</b><span id="st-lock">libre</span></div>
-      <div class="led"></div>
-      <div id="holdbar"></div>
-    </div>
-  </div>
 
+  </div>
 </div>
 
 <script>
 'use strict';
+/* ================= stockage local sûr (peut échouer en aperçu) ================= */
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+
 /* ================= constantes protocole (dossier de reprise) ================= */
 const SERVICE='0000ffe0-0000-1000-8000-00805f9b34fb';
 const CHAR   ='0000ffe1-0000-1000-8000-00805f9b34fb';
@@ -203,8 +226,11 @@ const CMD={
 
 /* ================= état ================= */
 let dev=null,chr=null,connected=false;
-let S={speed:null,batt:null,odo:null,status:null,stale:true};
+let S={speed:null,batt:null,odo:null,trip:null,temp:null,status:null,stale:true};
 let lastFrame=0;
+/* trip = total au dernier RAZ ; le contrôleur ne diffuse pas le partiel,
+   l'app le reconstruit à partir des variations de l'odomètre total. */
+let tripBase=parseFloat(lsGet('etwow-tripbase')); if(isNaN(tripBase))tripBase=null;
 
 /* ================= cadran SVG ================= */
 const NS='http://www.w3.org/2000/svg';
@@ -234,16 +260,19 @@ el('circle',{cx:C,cy:C,r:10,'stroke-width':2,style:'fill:var(--panel2);stroke:va
 
 /* ================= rendu ================= */
 const $=id=>document.getElementById(id);
+const fmt=v=>v.toFixed(1).replace('.',',');
 function render(){
   const sp=S.stale||S.speed==null?null:S.speed;
   $('speedval').textContent=sp==null?'--':(sp<10?sp.toFixed(1):Math.round(sp));
   const v=Math.min(sp||0,SCALE_MAX);
   needle.style.transform=`rotate(${vA(v)}deg)`;
   prog.setAttribute('d',v>0?arc(A0,vA(v),R):'');
-  if(S.batt!=null){$('battpct').innerHTML=S.batt+'<small> %</small>';
-    const f=$('battfill');f.style.height=S.batt+'%';
+  if(S.batt!=null){$('battpct').innerHTML=S.batt+'<small>%</small>';
+    const f=$('battfill');f.style.width=Math.max(0,Math.min(100,S.batt))+'%';
     f.style.background=S.batt<=20?'var(--red)':S.batt<=45?'var(--amber)':'var(--teal)';}
-  if(S.odo!=null)$('odoval').innerHTML=S.odo.toFixed(1).replace('.',',')+' <small>km</small>';
+  if(S.odo!=null)$('totalval').innerHTML=fmt(S.odo)+'<small>km</small>';
+  if(S.trip!=null)$('tripval').innerHTML=fmt(S.trip)+'<small>km</small>';
+  if(S.temp!=null)$('tempval').innerHTML=Math.round(S.temp)+'<small>°C</small>';
   if(S.status!=null){
     const st=S.status,mode=st&3,lamp=!!(st&16),lock=!!(st&32),
       direct=((st>>7)&1)===ZS_DIRECT_WHEN_BIT7;
@@ -270,7 +299,7 @@ setInterval(()=>{const stale=Date.now()-lastFrame>5000;
    Sans liaison : bascule sur l'horloge (nuit de 21 h à 7 h). */
 const SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5 5l1.8 1.8M17.2 17.2 19 19M5 19l1.8-1.8M17.2 6.8 19 5"/></svg>';
 const MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>';
-let themeMode=localStorage.getItem('etwow-theme')||'auto';
+let themeMode=lsGet('etwow-theme')||'auto';
 function themeIcon(){
   document.getElementById('theme-ic').innerHTML=
     themeMode==='auto'?'AUTO':themeMode==='day'?SUN:MOON;
@@ -286,7 +315,7 @@ function applyTheme(){
 }
 document.getElementById('btn-theme').onclick=()=>{
   themeMode=themeMode==='auto'?'day':themeMode==='day'?'night':'auto';
-  localStorage.setItem('etwow-theme',themeMode);
+  lsSet('etwow-theme',themeMode);
   themeIcon();applyTheme();
   ev('thème : '+(themeMode==='auto'?'auto (suit le phare)':themeMode==='day'?'jour':'nuit'));
 };
@@ -323,9 +352,8 @@ async function connect(){
 }
 /* reconnexion silencieuse au lancement, sans popup, si la plateforme le permet.
    Réalité iOS/Bluefy : getDevices() rend la permission mais pas de poignée
-   connectable — la tentative directe échoue et seul un scan (popup) reconnecte.
-   On tente quand même, puis watchAdvertisements comme dernier levier, sinon on
-   bascule vite sur l'écran d'accueil. */
+   connectable — la tentative directe échoue et seul watchAdvertisements
+   (re-repérage par balise) reconnecte sans popup, sinon on invite au tap. */
 async function autoConnect(){
   try{
     if(!navigator.bluetooth||!navigator.bluetooth.getDevices)return false;
@@ -334,10 +362,8 @@ async function autoConnect(){
     ev(known.length+' appareil(s) mémorisé(s)');
     if(!known.length)return false;
     const d=known[0];
-    // 1) tentative directe — marche sur Chrome desktop, rarement sur iOS
     try{ await attach(d); ev('reconnecté sans popup'); return true; }
     catch(e){ ev('direct : '+e.message); }
-    // 2) dernier levier : re-repérage par balise BLE, si l'implémentation le gère
     if(typeof d.watchAdvertisements==='function'){
       ovmsg('Recherche de '+(getName()||d.name||'la trottinette')+'…');
       const ok=await new Promise(resolve=>{
@@ -353,7 +379,7 @@ async function autoConnect(){
       });
       if(ok){ ovmsg(''); ev('reconnecté via balise'); return true; }
     }
-    ovmsg('');   // laisse l'écran d'accueil inviter au tap
+    ovmsg('');
     return false;
   }catch(e){ ev('autoConnect : '+e.message); ovmsg(''); return false; }
 }
@@ -375,7 +401,12 @@ function onNotif(e){
     case 0x01:S.speed=(d[1]|d[2]<<8)/10;break;
     case 0x02:S.batt=d[1]|d[2]<<8;break;
     case 0x03:if(S.status!==d[1]){S.status=d[1];ev('état 0x'+d[1].toString(16).padStart(2,'0'));}break;
-    case 0x04:S.odo=(d[1]|d[2]<<8)/10;break;
+    case 0x04:{
+      S.odo=(d[1]|d[2]<<8)/10;
+      if(tripBase==null||S.odo<tripBase){tripBase=S.odo;lsSet('etwow-tripbase',String(tripBase));}
+      S.trip=Math.max(0,S.odo-tripBase);
+      break;
+    }
   }
   render();
 }
@@ -403,7 +434,13 @@ $('sw-lamp').onclick=()=>{const on=!!(S.status&16);send(on?CMD.lampOff:CMD.lampO
 $('sw-zs').onclick=()=>{
   const direct=((S.status>>7)&1)===ZS_DIRECT_WHEN_BIT7;
   send(direct?CMD.zsOn:CMD.zsOff,direct?'départ kick':'départ direct');};
-$('btn-trip').onclick=()=>send(CMD.resetTrip,'RAZ compteur partiel');
+/* RAZ trip : remet le partiel calculé à zéro et resynchronise le guidon */
+$('btn-trip').onclick=e=>{
+  e.stopPropagation();
+  if(S.odo!=null){tripBase=S.odo;lsSet('etwow-tripbase',String(tripBase));S.trip=0;}
+  send(CMD.resetTrip,'RAZ trip');
+  render();
+};
 
 /* verrou : appui long 0,8 s pour verrouiller — jamais en roulant */
 {const sw=$('sw-lock'),bar=$('holdbar');let t=null,p=0,anim=null;
@@ -428,15 +465,12 @@ async function keepAwake(){
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&connected)keepAwake();});
 
-/* orientation : tenter le verrouillage paysage quand c'est permis */
-try{screen.orientation.lock('landscape').catch(()=>{});}catch(e){}
-
 /* ================= nom personnalisé ================= */
 const brand=document.getElementById('brand');
-function getName(){return localStorage.getItem('etwow-name')||'';}
+function getName(){return lsGet('etwow-name')||'';}
 function saveName(){
   const v=brand.textContent.trim().replace(/\s+/g,' ').slice(0,20)||'ETWOW GI';
-  brand.textContent=v;localStorage.setItem('etwow-name',v);ev('renommée : '+v);
+  brand.textContent=v;lsSet('etwow-name',v);ev('renommée : '+v);
 }
 {const saved=getName();if(saved)brand.textContent=saved;}
 brand.addEventListener('blur',saveName);
@@ -445,7 +479,6 @@ brand.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();bran
 render();
 
 /* ================= démarrage ================= */
-/* tente une reconnexion sans popup ; sinon on reste sur l'écran Connecter */
 autoConnect();
 
 </script>
