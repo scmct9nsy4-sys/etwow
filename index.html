@@ -80,7 +80,7 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 .mode small{display:block;font-family:'Barlow Condensed';font-weight:500;font-size:10.5px;letter-spacing:.05em;color:var(--faint)}
 .mode.on{background:var(--amber);color:var(--on-amber)}
 .mode.on small{color:var(--on-amber-dim)}
-#overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 84%,transparent);display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+#overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 84%,transparent);display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;backdrop-filter:blur(3px);cursor:pointer}
 #overlay.hide{display:none}
 #overlay p{font-size:15px;color:var(--dim);letter-spacing:.06em}
 #btn-big{font-family:'Chakra Petch';font-weight:700;font-size:18px;letter-spacing:.1em;background:var(--amber);color:var(--on-amber);border:none;border-radius:12px;padding:16px 34px;cursor:pointer}
@@ -155,7 +155,7 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
     <span id="lastev"></span>
     <div id="overlay">
       <p>Trottinette non connectée</p>
-      <button id="btn-big">Connecter</button>
+      <button id="btn-big">Touchez pour connecter</button>
       <p id="ovmsg" style="color:var(--red);max-width:80%;text-align:center;font-size:14px"></p>
     </div>
   </div>
@@ -303,7 +303,10 @@ async function attach(device){
   chr.addEventListener('characteristicvaluechanged',onNotif);
   connected=true;uiConn(true);keepAwake();
 }
+let connecting=false;
 async function connect(){
+  if(connecting||connected)return;
+  connecting=true;
   try{
     ovmsg('');
     if(location.protocol==='file:'){ovmsg('Ouvert en file:// — Web Bluetooth exige http://localhost:8000. Lance le serveur python et recharge.');return;}
@@ -315,44 +318,44 @@ async function connect(){
   }catch(e){
     if(e.name==='NotFoundError')ovmsg('Aucun périphérique choisi — ou E-TWOW invisible : app officielle fermée ? Trottinette allumée (< 3 min) ?');
     else ovmsg('Connexion : '+e.message);
-    ev('connexion : '+e.message);}
+    ev('connexion : '+e.message);
+  }finally{ connecting=false; }
 }
-/* tente un appareil plusieurs fois : laisse le HM-10 lâcher une liaison fantôme */
-async function tryDevice(d,attempts=6,gap=2500){
-  const who=getName()||d.name||'la trottinette';
-  for(let i=1;i<=attempts;i++){
-    try{
-      ovmsg('Reconnexion à '+who+'… (essai '+i+'/'+attempts+')');
-      await attach(d);
-      ovmsg('');
-      return true;
-    }catch(e){
-      ovmsg('Essai '+i+'/'+attempts+' : '+e.message);
-      if(i<attempts)await new Promise(r=>setTimeout(r,gap));
-    }
-  }
-  return false;
-}
-/* reconnexion silencieuse au lancement, sans popup, si Bluefy/Chrome le permet */
+/* reconnexion silencieuse au lancement, sans popup, si la plateforme le permet.
+   Réalité iOS/Bluefy : getDevices() rend la permission mais pas de poignée
+   connectable — la tentative directe échoue et seul un scan (popup) reconnecte.
+   On tente quand même, puis watchAdvertisements comme dernier levier, sinon on
+   bascule vite sur l'écran d'accueil. */
 async function autoConnect(){
   try{
-    if(!navigator.bluetooth||!navigator.bluetooth.getDevices){
-      ev('getDevices() absent — reconnexion auto indisponible ici');
-      return false;
-    }
-    await new Promise(r=>setTimeout(r,600)); // laisser le Bluetooth se réveiller au démarrage
+    if(!navigator.bluetooth||!navigator.bluetooth.getDevices)return false;
+    await new Promise(r=>setTimeout(r,400));
     const known=await navigator.bluetooth.getDevices();
-    ev(known.length+' appareil(s) mémorisé(s) par le navigateur');
-    if(!known.length){
-      ovmsg('Aucun appareil mémorisé — le navigateur n\'a pas retenu l\'autorisation. Connexion manuelle cette fois.');
-      return false;
+    ev(known.length+' appareil(s) mémorisé(s)');
+    if(!known.length)return false;
+    const d=known[0];
+    // 1) tentative directe — marche sur Chrome desktop, rarement sur iOS
+    try{ await attach(d); ev('reconnecté sans popup'); return true; }
+    catch(e){ ev('direct : '+e.message); }
+    // 2) dernier levier : re-repérage par balise BLE, si l'implémentation le gère
+    if(typeof d.watchAdvertisements==='function'){
+      ovmsg('Recherche de '+(getName()||d.name||'la trottinette')+'…');
+      const ok=await new Promise(resolve=>{
+        let done=false;
+        const finish=v=>{if(done)return;done=true;
+          d.removeEventListener('advertisementreceived',onAdv);
+          clearTimeout(to);resolve(v);};
+        const onAdv=async()=>{try{await attach(d);finish(true);}
+          catch(e){ev('adv : '+e.message);finish(false);}};
+        const to=setTimeout(()=>finish(false),8000);
+        d.addEventListener('advertisementreceived',onAdv);
+        Promise.resolve(d.watchAdvertisements()).catch(()=>finish(false));
+      });
+      if(ok){ ovmsg(''); ev('reconnecté via balise'); return true; }
     }
-    for(const d of known){
-      if(await tryDevice(d)){ev('reconnecté sans popup');return true;}
-    }
-    ovmsg('Injoignable après plusieurs essais — rallume la trottinette puis touche Connecter.');
+    ovmsg('');   // laisse l'écran d'accueil inviter au tap
     return false;
-  }catch(e){ ev('autoConnect : '+e.message); return false; }
+  }catch(e){ ev('autoConnect : '+e.message); ovmsg(''); return false; }
 }
 function onDisc(){connected=false;uiConn(false);ev('liaison perdue');
   let n=0;const t=setInterval(async()=>{
@@ -393,7 +396,8 @@ function uiConn(on){
 
 /* ================= commandes (les témoins suivent 0x03, jamais le bouton) ================= */
 $('btn-connect').onclick=()=>{if(!connected)connect();};
-$('btn-big').onclick=connect;
+$('btn-big').onclick=e=>{e.stopPropagation();connect();};
+$('overlay').onclick=connect;
 document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>send(CMD.mode(+b.dataset.m),'mode L'+b.dataset.m));
 $('sw-lamp').onclick=()=>{const on=!!(S.status&16);send(on?CMD.lampOff:CMD.lampOn,on?'phare éteint':'phare allumé');};
 $('sw-zs').onclick=()=>{
