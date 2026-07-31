@@ -320,14 +320,28 @@ async function connect(){
 /* reconnexion silencieuse au lancement, sans popup, si Bluefy/Chrome le permet */
 async function autoConnect(){
   try{
-    if(!navigator.bluetooth||!navigator.bluetooth.getDevices)return false; // repli : Chrome desktop, etc.
+    if(!navigator.bluetooth||!navigator.bluetooth.getDevices){
+      ev('getDevices() absent — reconnexion auto indisponible ici');
+      return false;
+    }
     const known=await navigator.bluetooth.getDevices();
-    const mine=known.find(d=>d.name&&d.name.startsWith('E-TWOW'));
-    if(!mine)return false;
-    ovmsg('Reconnexion à '+(getName()||mine.name)+'…');
-    await attach(mine);ev('reconnecté sans popup');ovmsg('');
-    return true;
-  }catch(e){ovmsg('');return false;}
+    ev(known.length+' appareil(s) mémorisé(s) par le navigateur');
+    if(!known.length){
+      ovmsg('Aucun appareil mémorisé — le navigateur n\'a pas retenu l\'autorisation. Connexion manuelle cette fois.');
+      return false;
+    }
+    // on tente chaque appareil connu, sans filtrer sur le nom (souvent vide sur iOS)
+    for(const d of known){
+      try{
+        ovmsg('Reconnexion à '+(getName()||d.name||'la trottinette')+'…');
+        await attach(d);
+        ev('reconnecté sans popup');ovmsg('');
+        return true;
+      }catch(e){ ev('échec sur '+(d.name||'sans nom')+' : '+e.message); }
+    }
+    ovmsg('Trottinette mémorisée mais injoignable — allumée et à portée ? Sinon touche Connecter.');
+    return false;
+  }catch(e){ ev('autoConnect : '+e.message); return false; }
 }
 function onDisc(){connected=false;uiConn(false);ev('liaison perdue');
   let n=0;const t=setInterval(async()=>{
