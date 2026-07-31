@@ -42,7 +42,8 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 
 /* ---------- bandeau supérieur ---------- */
 #top{grid-area:top;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 12px}
-#brand{font-family:'Chakra Petch';font-weight:700;font-size:15px;letter-spacing:.14em;color:var(--dim)}
+#brand{font-family:'Chakra Petch';font-weight:700;font-size:15px;letter-spacing:.14em;color:var(--dim);outline:none;border-radius:5px;padding:2px 5px;cursor:text;max-width:140px;white-space:nowrap;overflow:hidden}
+#brand:focus{color:var(--txt);background:var(--panel2);box-shadow:0 0 0 1.5px var(--line2)}
 #telltales{display:flex;gap:14px;margin-left:auto;align-items:center}
 .tt{width:30px;height:30px;display:flex;align-items:center;justify-content:center;opacity:.22;transition:opacity .25s,filter .25s}
 .tt svg{width:24px;height:24px}
@@ -113,7 +114,7 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 <div id="app">
 
   <div id="top">
-    <span id="brand">E-TWOW · GTS</span>
+    <span id="brand" contenteditable="true" spellcheck="false" title="Touche pour renommer">ETWOW GI</span>
     <div id="telltales">
       <div class="tt" id="tt-beam" title="Phare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 5c4 0 7 3.1 7 7s-3 7-7 7c-2.5 0-4-1.5-4-3.5v-7C10 6.5 11.5 5 14 5Z"/><path d="M2 7h6M2 12h6M2 17h6"/></svg></div>
       <div class="tt" id="tt-zs" title="Départ direct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></div>
@@ -293,6 +294,15 @@ themeIcon();applyTheme();
 
 /* ================= BLE ================= */
 function ovmsg(m){const e=document.getElementById('ovmsg');if(e)e.textContent=m;}
+async function attach(device){
+  dev=device;
+  dev.addEventListener('gattserverdisconnected',onDisc);
+  const srv=await(await dev.gatt.connect()).getPrimaryService(SERVICE);
+  chr=await srv.getCharacteristic(CHAR);
+  await chr.startNotifications();
+  chr.addEventListener('characteristicvaluechanged',onNotif);
+  connected=true;uiConn(true);keepAwake();
+}
 async function connect(){
   try{
     ovmsg('');
@@ -300,18 +310,24 @@ async function connect(){
     if(!navigator.bluetooth){ovmsg('Ce navigateur n\'a pas Web Bluetooth. Sur Mac : Chrome. Sur iPhone : Bluefy.');return;}
     const avail=navigator.bluetooth.getAvailability?await navigator.bluetooth.getAvailability():true;
     if(!avail){ovmsg('Bluetooth inaccessible — vérifier Réglages Système → Confidentialité → Bluetooth → autoriser Chrome.');return;}
-    dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'E-TWOW'}],optionalServices:[SERVICE]});
-    dev.addEventListener('gattserverdisconnected',onDisc);
-    const srv=await(await dev.gatt.connect()).getPrimaryService(SERVICE);
-    chr=await srv.getCharacteristic(CHAR);
-    await chr.startNotifications();
-    chr.addEventListener('characteristicvaluechanged',onNotif);
-    connected=true;uiConn(true);ev('connecté');
-    keepAwake();
+    const device=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'E-TWOW'}],optionalServices:[SERVICE]});
+    await attach(device);ev('connecté');
   }catch(e){
     if(e.name==='NotFoundError')ovmsg('Aucun périphérique choisi — ou E-TWOW invisible : app officielle fermée ? Trottinette allumée (< 3 min) ?');
     else ovmsg('Connexion : '+e.message);
     ev('connexion : '+e.message);}
+}
+/* reconnexion silencieuse au lancement, sans popup, si Bluefy/Chrome le permet */
+async function autoConnect(){
+  try{
+    if(!navigator.bluetooth||!navigator.bluetooth.getDevices)return false; // repli : Chrome desktop, etc.
+    const known=await navigator.bluetooth.getDevices();
+    const mine=known.find(d=>d.name&&d.name.startsWith('E-TWOW'));
+    if(!mine)return false;
+    ovmsg('Reconnexion à '+(getName()||mine.name)+'…');
+    await attach(mine);ev('reconnecté sans popup');ovmsg('');
+    return true;
+  }catch(e){ovmsg('');return false;}
 }
 function onDisc(){connected=false;uiConn(false);ev('liaison perdue');
   let n=0;const t=setInterval(async()=>{
@@ -386,7 +402,23 @@ document.addEventListener('visibilitychange',()=>{
 /* orientation : tenter le verrouillage paysage quand c'est permis */
 try{screen.orientation.lock('landscape').catch(()=>{});}catch(e){}
 
+/* ================= nom personnalisé ================= */
+const brand=document.getElementById('brand');
+function getName(){return localStorage.getItem('etwow-name')||'';}
+function saveName(){
+  const v=brand.textContent.trim().replace(/\s+/g,' ').slice(0,20)||'ETWOW GI';
+  brand.textContent=v;localStorage.setItem('etwow-name',v);ev('renommée : '+v);
+}
+{const saved=getName();if(saved)brand.textContent=saved;}
+brand.addEventListener('blur',saveName);
+brand.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();brand.blur();}});
+
 render();
+
+/* ================= démarrage ================= */
+/* tente une reconnexion sans popup ; sinon on reste sur l'écran Connecter */
+autoConnect();
+
 </script>
 </body>
 </html>
