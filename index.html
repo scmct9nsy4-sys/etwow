@@ -317,6 +317,22 @@ async function connect(){
     else ovmsg('Connexion : '+e.message);
     ev('connexion : '+e.message);}
 }
+/* tente un appareil plusieurs fois : laisse le HM-10 lâcher une liaison fantôme */
+async function tryDevice(d,attempts=6,gap=2500){
+  const who=getName()||d.name||'la trottinette';
+  for(let i=1;i<=attempts;i++){
+    try{
+      ovmsg('Reconnexion à '+who+'… (essai '+i+'/'+attempts+')');
+      await attach(d);
+      ovmsg('');
+      return true;
+    }catch(e){
+      ovmsg('Essai '+i+'/'+attempts+' : '+e.message);
+      if(i<attempts)await new Promise(r=>setTimeout(r,gap));
+    }
+  }
+  return false;
+}
 /* reconnexion silencieuse au lancement, sans popup, si Bluefy/Chrome le permet */
 async function autoConnect(){
   try{
@@ -324,22 +340,17 @@ async function autoConnect(){
       ev('getDevices() absent — reconnexion auto indisponible ici');
       return false;
     }
+    await new Promise(r=>setTimeout(r,600)); // laisser le Bluetooth se réveiller au démarrage
     const known=await navigator.bluetooth.getDevices();
     ev(known.length+' appareil(s) mémorisé(s) par le navigateur');
     if(!known.length){
       ovmsg('Aucun appareil mémorisé — le navigateur n\'a pas retenu l\'autorisation. Connexion manuelle cette fois.');
       return false;
     }
-    // on tente chaque appareil connu, sans filtrer sur le nom (souvent vide sur iOS)
     for(const d of known){
-      try{
-        ovmsg('Reconnexion à '+(getName()||d.name||'la trottinette')+'…');
-        await attach(d);
-        ev('reconnecté sans popup');ovmsg('');
-        return true;
-      }catch(e){ ev('échec sur '+(d.name||'sans nom')+' : '+e.message); }
+      if(await tryDevice(d)){ev('reconnecté sans popup');return true;}
     }
-    ovmsg('Trottinette mémorisée mais injoignable — allumée et à portée ? Sinon touche Connecter.');
+    ovmsg('Injoignable après plusieurs essais — rallume la trottinette puis touche Connecter.');
     return false;
   }catch(e){ ev('autoConnect : '+e.message); return false; }
 }
