@@ -51,6 +51,15 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 #btn-set{width:40px;height:34px;border-radius:9px;border:1.5px solid var(--line2);background:var(--panel2);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #btn-set svg{width:18px;height:18px}
 
+/* ---------- alerte mouvement ---------- */
+#alarm{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center;background:var(--red);color:#fff;animation:alarmpulse 1s ease-in-out infinite}
+#alarm.hide{display:none}
+#alarm svg{width:clamp(48px,11vmin,80px);height:clamp(48px,11vmin,80px)}
+#alarm b{font-family:'Chakra Petch';font-weight:700;font-size:clamp(20px,5vmin,32px);letter-spacing:.1em}
+#alarm p{font-size:15px;opacity:.92;max-width:34ch;line-height:1.4}
+#btn-alarmstop{margin-top:6px;background:#fff;color:var(--red);border:none;border-radius:12px;padding:15px 30px;font-family:'Chakra Petch';font-weight:700;font-size:17px;letter-spacing:.08em;cursor:pointer}
+@keyframes alarmpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(.72)}}
+
 /* ---------- panneau réglages ---------- */
 #sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);z-index:20;display:flex;align-items:center;justify-content:center;padding:16px}
 #sheet.hide{display:none}
@@ -159,6 +168,14 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
     <button id="btn-connect">Connecter</button>
   </div>
 
+  <!-- ============ alerte mouvement ============ -->
+  <div id="alarm" class="hide">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <b>MOUVEMENT DÉTECTÉ</b>
+    <p id="alarm-txt">La trottinette bouge alors qu'elle est verrouillée.</p>
+    <button id="btn-alarmstop">Arrêter l'alarme</button>
+  </div>
+
   <!-- ============ panneau réglages / historique ============ -->
   <div id="sheet" class="hide">
     <div id="sheetbox">
@@ -172,6 +189,10 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
           <label class="opt">
             <input type="checkbox" id="opt-dusk">
             <span class="optx"><b>Phare au crépuscule</b><i id="dusk-info">Allume le phare automatiquement à la tombée du jour.</i></span>
+          </label>
+          <label class="opt">
+            <input type="checkbox" id="opt-alarm">
+            <span class="optx"><b>Alarme de mouvement</b><i>Sonne si la trottinette bouge alors que le verrou est actif. Surveillance à vue : ne fonctionne que l'app ouverte à l'écran.</i></span>
           </label>
         </div>
         <div class="sect">
@@ -456,7 +477,7 @@ function onNotif(e){
   if((s&0xFF)!==d[d.length-1])return;           // checksum = oracle
   lastFrame=Date.now();S.stale=false;
   switch(d[0]){
-    case 0x01:S.speed=(d[1]|d[2]<<8)/10;break;
+    case 0x01:S.speed=(d[1]|d[2]<<8)/10;try{alarmCheck();}catch(err){}break;
     case 0x02:S.batt=d[1]|d[2]<<8;try{histAdd();}catch(err){}break;
     case 0x03:if(S.status!==d[1]){S.status=d[1];ev('état 0x'+d[1].toString(16).padStart(2,'0'));}break;
     case 0x04:{
@@ -678,6 +699,69 @@ $('opt-dusk').onchange=e=>{
 };
 duskInfo();
 setInterval(()=>{duskTick();duskInfo();},60000);
+
+/* ================= alarme de mouvement =================
+   Déclenche si le registre 0x01 remonte une vitesse alors que le verrou
+   (bit 5 de 0x03) est actif. Surveillance à vue uniquement : iOS suspend
+   la page dès que l'app passe en arrière-plan, la liaison BLE tombe alors. */
+let optAlarm=lsGet('etwow-opt-alarm')==='1';
+let alarmOn=false, audioCtx=null, sirenTimer=null;
+const ALARM_SPEED=0.5;   // km/h — au-dessus, c'est un vrai déplacement
+
+function beep(){
+  try{
+    if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    const t=audioCtx.currentTime;
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='square';
+    o.frequency.setValueAtTime(880,t);
+    o.frequency.linearRampToValueAtTime(1400,t+0.25);
+    o.frequency.linearRampToValueAtTime(880,t+0.5);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.35,t+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
+    o.connect(g);g.connect(audioCtx.destination);
+    o.start(t);o.stop(t+0.52);
+  }catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate([300,120,300]);}catch(e){}
+}
+function alarmStart(){
+  if(alarmOn)return;
+  alarmOn=true;
+  $('alarm').classList.remove('hide');
+  $('alarm-txt').textContent='La trottinette bouge alors qu\'elle est verrouillée.';
+  ev('ALARME : mouvement détecté');
+  beep();
+  sirenTimer=setInterval(beep,700);
+}
+function alarmStop(){
+  alarmOn=false;
+  clearInterval(sirenTimer);sirenTimer=null;
+  $('alarm').classList.add('hide');
+  try{if(navigator.vibrate)navigator.vibrate(0);}catch(e){}
+}
+function alarmCheck(){
+  if(!optAlarm||!connected||alarmOn)return;
+  if(S.status==null||S.speed==null)return;
+  const locked=!!(S.status&32);
+  if(locked&&S.speed>=ALARM_SPEED)alarmStart();
+}
+$('opt-alarm').checked=optAlarm;
+$('opt-alarm').onchange=e=>{
+  optAlarm=e.target.checked;
+  lsSet('etwow-opt-alarm',optAlarm?'1':'0');
+  ev('alarme mouvement : '+(optAlarm?'activée':'désactivée'));
+  if(!optAlarm)alarmStop();
+  else{
+    // débloque l'audio iOS : il exige un geste utilisateur pour autoriser le son
+    try{
+      if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      audioCtx.resume();
+    }catch(err){}
+  }
+};
+$('btn-alarmstop').onclick=alarmStop;
 
 /* ================= démarrage ================= */
 autoConnect();
