@@ -79,7 +79,8 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 #btn-sheetclose{background:var(--amber);color:var(--on-amber);border:none;border-radius:8px;padding:7px 14px;font-family:'Chakra Petch';font-weight:700;font-size:13px;cursor:pointer}
 #sheetbody{overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:18px;-webkit-overflow-scrolling:touch}
 .sect{display:flex;flex-direction:column;gap:7px}
-.secthead{display:flex;align-items:center;justify-content:space-between}
+.secthead{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.secthead .mini{flex-shrink:0}
 .mini{background:var(--panel2);border:1px solid var(--line2);color:var(--dim);border-radius:7px;padding:4px 10px;font-family:'Chakra Petch';font-weight:700;font-size:11px;cursor:pointer}
 .mini.wide{width:100%;padding:8px 0;margin-top:4px}
 .hint{font-size:12.5px;color:var(--dim);line-height:1.45}
@@ -220,6 +221,7 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
         <div class="sect">
           <div class="secthead">
             <span class="lbl">BATTERIE — HISTORIQUE</span>
+            <button id="btn-histfix" class="mini">Corriger</button>
             <button id="btn-histclear" class="mini">Effacer</button>
           </div>
           <svg id="histchart" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
@@ -326,6 +328,8 @@ let dev=null,chr=null,connected=false;
 let S={speed:null,batt:null,odo:null,trip:null,temp:null,status:null,stale:true};
 let lastFrame=0;
 let lastSpeedSeen=null;   // dernière vitesse reçue, pour le garde-fou de proximité
+let odoAt=0;              // date de la dernière trame odomètre reçue
+let pendingLog=false;     // un relevé attend l'arrivée d'un odomètre frais
 /* trip = total au dernier RAZ ; le contrôleur ne diffuse pas le partiel,
    l'app le reconstruit à partir des variations de l'odomètre total. */
 let tripBase=parseFloat(lsGet('etwow-tripbase')); if(isNaN(tripBase))tripBase=null;
@@ -508,8 +512,10 @@ function onNotif(e){
     case 0x03:if(S.status!==d[1]){S.status=d[1];ev('état 0x'+d[1].toString(16).padStart(2,'0'));}break;
     case 0x04:{
       S.odo=(d[1]|d[2]<<8)/10;
+      odoAt=Date.now();
       if(tripBase==null||S.odo<tripBase){tripBase=S.odo;lsSet('etwow-tripbase',String(tripBase));}
       S.trip=Math.max(0,S.odo-tripBase);
+      if(pendingLog){pendingLog=false;try{histAdd();}catch(err){}}
       break;
     }
   }
@@ -599,13 +605,24 @@ function histSave(){
 }
 function histAdd(force){
   if(S.batt==null||typeof hist==='undefined'||!hist)return;
+  /* Le contrôleur émet 01·02·04·05·03 : la batterie (02) précède l'odomètre (04).
+     On attend donc un odomètre frais avant d'enregistrer, sinon on figerait la
+     valeur du cycle précédent. odoAt = date de la dernière trame 04 reçue. */
   const now=Date.now();
+  if(S.odo==null||(now-odoAt)>4000){
+    pendingLog=true;              // on enregistrera dès que 04 arrivera
+    return;
+  }
   const last=hist[hist.length-1];
   const changed=lastLogged==null||S.batt!==lastLogged;
   const stale=last&&(now-last.t)>600000;      // ou toutes les 10 min
   if(!force&&!changed&&!stale)return;
-  if(last&&(now-last.t)<15000&&last.b===S.batt)return;   // anti-doublon
-  hist.push({t:now,b:S.batt,o:S.odo!=null?S.odo:null});
+  if(last&&(now-last.t)<15000&&last.b===S.batt){
+    last.o=S.odo;                 // même relevé : on rafraîchit juste l'odomètre
+    histSave();
+    return;
+  }
+  hist.push({t:now,b:S.batt,o:S.odo});
   lastLogged=S.batt;
   histSave();
   if(!$('sheet').classList.contains('hide'))histRender();
@@ -663,6 +680,16 @@ $('btn-histcsv').onclick=histCSV;
 $('btn-histclear').onclick=()=>{
   if(!confirm('Effacer tout l\'historique batterie ?'))return;
   hist=[];lastLogged=null;histSave();histRender();ev('historique effacé');
+};
+$('btn-histfix').onclick=()=>{
+  if(!hist.length){alert('Aucun relevé à corriger.');return;}
+  const last=hist[hist.length-1];
+  const cur=last.o!=null?fmt(last.o):'';
+  const v=prompt('Odomètre réel du dernier relevé ('+last.b+' %), en km :',cur);
+  if(v==null)return;
+  const n=parseFloat(String(v).replace(',','.'));
+  if(isNaN(n)||n<0){alert('Valeur invalide.');return;}
+  last.o=n;histSave();histRender();ev('relevé corrigé : '+fmt(n)+' km');
 };
 
 /* ================= crépuscule =================
