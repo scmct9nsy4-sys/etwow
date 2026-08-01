@@ -51,6 +51,16 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 #btn-set{width:40px;height:34px;border-radius:9px;border:1.5px solid var(--line2);background:var(--panel2);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 #btn-set svg{width:18px;height:18px}
 
+/* ---------- proposition verrou de proximité ---------- */
+#prox{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));z-index:35;display:flex;align-items:center;gap:12px;background:var(--panel);border:2px solid var(--amber);border-radius:14px;padding:12px 14px;box-shadow:0 8px 28px rgba(0,0,0,.45);max-width:calc(100% - 24px)}
+#prox.hide{display:none}
+#prox>svg{width:30px;height:30px;color:var(--amber);flex-shrink:0}
+.proxtx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.proxtx b{font-size:15px;font-weight:600;letter-spacing:.04em;white-space:nowrap}
+.proxtx i{font-style:normal;font-size:12.5px;color:var(--dim)}
+#btn-proxyes{background:var(--amber);color:var(--on-amber);border:none;border-radius:10px;padding:11px 18px;font-family:'Chakra Petch';font-weight:700;font-size:14px;cursor:pointer;flex-shrink:0}
+#btn-proxno{background:transparent;color:var(--dim);border:1px solid var(--line2);border-radius:10px;padding:11px 14px;font-family:'Chakra Petch';font-weight:700;font-size:14px;cursor:pointer;flex-shrink:0}
+
 /* ---------- alerte mouvement ---------- */
 #alarm{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center;background:var(--red);color:#fff;animation:alarmpulse 1s ease-in-out infinite}
 #alarm.hide{display:none}
@@ -168,6 +178,14 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
     <button id="btn-connect">Connecter</button>
   </div>
 
+  <!-- ============ proposition verrou de proximité ============ -->
+  <div id="prox" class="hide">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    <div class="proxtx"><b>Vous vous éloignez</b><i id="prox-sub">Verrouiller le moteur ?</i></div>
+    <button id="btn-proxyes">Verrouiller</button>
+    <button id="btn-proxno" class="ghost">Non</button>
+  </div>
+
   <!-- ============ alerte mouvement ============ -->
   <div id="alarm" class="hide">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
@@ -193,6 +211,10 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
           <label class="opt">
             <input type="checkbox" id="opt-alarm">
             <span class="optx"><b>Alarme de mouvement</b><i>Sonne si la trottinette bouge alors que le verrou est actif. Surveillance à vue : ne fonctionne que l'app ouverte à l'écran.</i></span>
+          </label>
+          <label class="opt">
+            <input type="checkbox" id="opt-prox">
+            <span class="optx"><b>Verrou de proximité</b><i>Propose de verrouiller quand vous vous éloignez, et déverrouille au retour. Ne propose rien si la trottinette roulait au moment de la coupure.</i></span>
           </label>
         </div>
         <div class="sect">
@@ -303,6 +325,7 @@ const CMD={
 let dev=null,chr=null,connected=false;
 let S={speed:null,batt:null,odo:null,trip:null,temp:null,status:null,stale:true};
 let lastFrame=0;
+let lastSpeedSeen=null;   // dernière vitesse reçue, pour le garde-fou de proximité
 /* trip = total au dernier RAZ ; le contrôleur ne diffuse pas le partiel,
    l'app le reconstruit à partir des variations de l'odomètre total. */
 let tripBase=parseFloat(lsGet('etwow-tripbase')); if(isNaN(tripBase))tripBase=null;
@@ -410,6 +433,7 @@ async function attach(device){
   connected=true;uiConn(true);keepAwake();
   lastLogged=null;   // force un relevé d'historique à la connexion
   setTimeout(()=>{try{duskTick();}catch(e){}},2000);  // laisse arriver l'état 0x03
+  setTimeout(()=>{try{proxOnFound();}catch(e){}},2500);
 }
 let connecting=false;
 async function connect(){
@@ -463,12 +487,14 @@ async function autoConnect(){
   }catch(e){ ev('autoConnect : '+e.message); ovmsg(''); return false; }
 }
 function onDisc(){connected=false;uiConn(false);ev('liaison perdue');
+  try{proxOnLost();}catch(e){}
   let n=0;const t=setInterval(async()=>{
     if(connected||++n>3){clearInterval(t);return;}
     try{const srv=await(await dev.gatt.connect()).getPrimaryService(SERVICE);
       chr=await srv.getCharacteristic(CHAR);await chr.startNotifications();
       chr.addEventListener('characteristicvaluechanged',onNotif);
       connected=true;uiConn(true);ev('reconnecté');clearInterval(t);
+      try{proxOnFound();}catch(e){}
     }catch(e){}},2500);}
 function onNotif(e){
   const d=new Uint8Array(e.target.value.buffer);
@@ -477,7 +503,7 @@ function onNotif(e){
   if((s&0xFF)!==d[d.length-1])return;           // checksum = oracle
   lastFrame=Date.now();S.stale=false;
   switch(d[0]){
-    case 0x01:S.speed=(d[1]|d[2]<<8)/10;try{alarmCheck();}catch(err){}break;
+    case 0x01:S.speed=(d[1]|d[2]<<8)/10;lastSpeedSeen=S.speed;try{alarmCheck();}catch(err){}break;
     case 0x02:S.batt=d[1]|d[2]<<8;try{histAdd();}catch(err){}break;
     case 0x03:if(S.status!==d[1]){S.status=d[1];ev('état 0x'+d[1].toString(16).padStart(2,'0'));}break;
     case 0x04:{
@@ -762,6 +788,67 @@ $('opt-alarm').onchange=e=>{
   }
 };
 $('btn-alarmstop').onclick=alarmStop;
+
+/* ================= verrou de proximité =================
+   À la perte de liaison : si la trottinette était bien à l'arrêt, on attend
+   un délai (une coupure fugace se rétablit vite) puis on propose de verrouiller.
+   Jamais automatique, jamais si l'engin roulait — cf. §8 : le verrou coupe la
+   puissance dans l'instant. Au retour de liaison, déverrouillage proposé. */
+let optProx=lsGet('etwow-opt-prox')==='1';
+const PROX_DELAY=20000;          // 20 s avant de proposer
+let proxTimer=null, wasLockedByProx=false;
+
+function proxHide(){$('prox').classList.add('hide');}
+function proxShow(sub,onYes,yesLabel){
+  $('prox-sub').textContent=sub;
+  $('btn-proxyes').textContent=yesLabel||'Verrouiller';
+  $('prox').classList.remove('hide');
+  $('btn-proxyes').onclick=()=>{proxHide();onYes();};
+  $('btn-proxno').onclick=()=>{proxHide();};
+}
+/* appelé quand la liaison tombe */
+function proxOnLost(){
+  if(!optProx)return;
+  clearTimeout(proxTimer);
+  if(lastSpeedSeen==null||lastSpeedSeen>0.5){
+    ev('proximité : ignorée, la trottinette roulait');
+    return;                       // garde-fou principal
+  }
+  proxTimer=setTimeout(async()=>{
+    if(connected){proxHide();return;}          // revenue entre-temps
+    // il faut être connecté pour envoyer l'ordre : on tente une reconnexion
+    ev('proximité : tentative de reconnexion pour verrouiller');
+    const ok=await autoConnect();
+    if(!ok||!connected){
+      ev('proximité : hors de portée, verrouillage impossible');
+      return;
+    }
+    if(S.status!=null&&(S.status&32))return;    // déjà verrouillée
+    if((S.speed||0)>0.5){ev('proximité : annulée, mouvement détecté');return;}
+    proxShow('Verrouiller le moteur ?',()=>{
+      send(CMD.lock,'verrouillé (proximité)');
+      wasLockedByProx=true;
+    });
+  },PROX_DELAY);
+}
+/* appelé quand la liaison revient */
+function proxOnFound(){
+  clearTimeout(proxTimer);
+  if(!optProx)return;
+  if(wasLockedByProx&&S.status!=null&&(S.status&32)){
+    proxShow('Déverrouiller le moteur ?',()=>{
+      send(CMD.unlock,'déverrouillé (retour)');
+      wasLockedByProx=false;
+    },'Déverrouiller');
+  }
+}
+$('opt-prox').checked=optProx;
+$('opt-prox').onchange=e=>{
+  optProx=e.target.checked;
+  lsSet('etwow-opt-prox',optProx?'1':'0');
+  if(!optProx){clearTimeout(proxTimer);proxHide();}
+  ev('verrou proximité : '+(optProx?'activé':'désactivé'));
+};
 
 /* ================= démarrage ================= */
 autoConnect();
