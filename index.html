@@ -66,9 +66,6 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 #dial{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;padding:4px 6px 6px}
 #gaugewrap{position:relative;flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;padding:2px 0}
 #gauge{width:100%;height:100%;display:block}
-#speeddigits{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
-#speedval{font-family:'Chakra Petch';font-weight:700;font-size:clamp(46px,13vmin,88px);line-height:1;letter-spacing:-.02em}
-#speedunit{font-size:clamp(12px,2.4vmin,16px);font-weight:600;letter-spacing:.28em;color:var(--dim)}
 #modes{display:flex;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:5px;margin-top:2px;flex-shrink:0}
 .mode{width:60px;padding:6px 0;border-radius:8px;border:none;background:transparent;color:var(--dim);font-family:'Chakra Petch';font-weight:700;font-size:15px;cursor:pointer;line-height:1.1}
 .mode small{display:block;font-family:'Barlow Condensed';font-weight:500;font-size:10.5px;letter-spacing:.05em;color:var(--faint)}
@@ -159,11 +156,7 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 
     <div id="dial">
       <div id="gaugewrap">
-        <svg id="gauge" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet"></svg>
-        <div id="speeddigits">
-          <div id="speedval">--</div>
-          <div id="speedunit">KM/H</div>
-        </div>
+        <svg id="gauge" viewBox="30 28 340 272" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
       <div id="modes">
         <button class="mode" data-m="0">L0<small>41 max</small></button>
@@ -257,6 +250,8 @@ const needle=el('g',{style:'transition:transform .28s cubic-bezier(.3,1.2,.4,1);
  p.setAttribute('style','fill:var(--amber);filter:drop-shadow(0 0 6px var(--glow))');
  needle.appendChild(p);}
 el('circle',{cx:C,cy:C,r:10,'stroke-width':2,style:'fill:var(--panel2);stroke:var(--faint)'});
+el('text',{id:'speedval',x:C,y:208,'text-anchor':'middle','dominant-baseline':'central','font-family':'Chakra Petch','font-weight':700,'font-size':64,style:'fill:var(--txt)'}).textContent='--';
+el('text',{x:C,y:252,'text-anchor':'middle','dominant-baseline':'central','font-family':'Barlow Condensed','font-weight':600,'font-size':16,style:'fill:var(--dim);letter-spacing:3px'}).textContent='KM/H';
 
 /* ================= rendu ================= */
 const $=id=>document.getElementById(id);
