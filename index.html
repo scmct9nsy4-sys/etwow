@@ -64,6 +64,11 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 .mini{background:var(--panel2);border:1px solid var(--line2);color:var(--dim);border-radius:7px;padding:4px 10px;font-family:'Chakra Petch';font-weight:700;font-size:11px;cursor:pointer}
 .mini.wide{width:100%;padding:8px 0;margin-top:4px}
 .hint{font-size:12.5px;color:var(--dim);line-height:1.45}
+.opt{display:flex;align-items:flex-start;gap:11px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;cursor:pointer}
+.opt input{width:22px;height:22px;flex-shrink:0;accent-color:var(--amber);cursor:pointer;margin-top:1px}
+.optx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.optx b{font-size:14.5px;font-weight:600;letter-spacing:.04em}
+.optx i{font-style:normal;font-size:12.5px;color:var(--dim);line-height:1.4}
 #histchart{width:100%;height:150px;background:var(--panel2);border:1px solid var(--line);border-radius:10px}
 #histtable{display:flex;flex-direction:column;gap:3px;max-height:180px;overflow-y:auto;font-size:13px}
 .hrow{display:flex;justify-content:space-between;gap:10px;padding:5px 8px;background:var(--panel2);border-radius:6px}
@@ -162,6 +167,13 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
         <button id="btn-sheetclose">Fermer</button>
       </div>
       <div id="sheetbody">
+        <div class="sect">
+          <span class="lbl">AUTOMATISMES</span>
+          <label class="opt">
+            <input type="checkbox" id="opt-dusk">
+            <span class="optx"><b>Phare au crépuscule</b><i id="dusk-info">Allume le phare automatiquement à la tombée du jour.</i></span>
+          </label>
+        </div>
         <div class="sect">
           <div class="secthead">
             <span class="lbl">BATTERIE — HISTORIQUE</span>
@@ -376,6 +388,7 @@ async function attach(device){
   chr.addEventListener('characteristicvaluechanged',onNotif);
   connected=true;uiConn(true);keepAwake();
   lastLogged=null;   // force un relevé d'historique à la connexion
+  setTimeout(()=>{try{duskTick();}catch(e){}},2000);  // laisse arriver l'état 0x03
 }
 let connecting=false;
 async function connect(){
@@ -604,6 +617,67 @@ $('btn-histclear').onclick=()=>{
   if(!confirm('Effacer tout l\'historique batterie ?'))return;
   hist=[];lastLogged=null;histSave();histRender();ev('historique effacé');
 };
+
+/* ================= crépuscule =================
+   Algorithme NOAA, calculé localement : aucune API, aucune connexion.
+   Coordonnées par défaut : Liège. Si la géolocalisation est accordée
+   pour le bridage géo (plus tard), on les affinera. */
+const LAT=50.63, LON=5.57;
+function sunTimes(date){
+  const rad=Math.PI/180, dayMs=86400000, J1970=2440588, J2000=2451545;
+  const toJulian=d=>d.valueOf()/dayMs-0.5+J1970;
+  const fromJulian=j=>new Date((j+0.5-J1970)*dayMs);
+  const e=rad*23.4397;
+  const M0=d=>rad*(357.5291+0.98560028*d);
+  const L0=M=>{const C=rad*(1.9148*Math.sin(M)+0.02*Math.sin(2*M)+0.0003*Math.sin(3*M));
+               return M+C+rad*102.9372+Math.PI;};
+  const dec=L=>Math.asin(Math.sin(e)*Math.sin(L));
+  const lw=rad*-LON, phi=rad*LAT, d=toJulian(date)-J2000;
+  const n=Math.round(d-0.0009-lw/(2*Math.PI));
+  const approx=Ht=>0.0009+(Ht+lw)/(2*Math.PI)+n;
+  const transit=(ds,M,L)=>J2000+ds+0.0053*Math.sin(M)-0.0069*Math.sin(2*L);
+  const ds=approx(0), M=M0(ds), L=L0(M), D=dec(L);
+  const Jnoon=transit(ds,M,L);
+  const h0=rad*-0.833;
+  const w=Math.acos((Math.sin(h0)-Math.sin(phi)*Math.sin(D))/(Math.cos(phi)*Math.cos(D)));
+  const Jset=transit(approx(w),M,L);
+  return {sunrise:fromJulian(Jnoon-(Jset-Jnoon)), sunset:fromJulian(Jset)};
+}
+/* nuit = après le coucher ou avant le lever du jour courant */
+function isDark(now){
+  now=now||new Date();
+  const t=sunTimes(now);
+  return now>=t.sunset||now<=t.sunrise;
+}
+function hhmm(d){return d.toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'});}
+
+/* ================= automatisme phare ================= */
+let optDusk=lsGet('etwow-opt-dusk')==='1';
+let duskDone=null;      // mémorise la décision déjà appliquée, pour ne pas lutter
+function duskInfo(){
+  const t=sunTimes(new Date());
+  $('dusk-info').textContent='Allume le phare automatiquement à la tombée du jour. '+
+    'Aujourd\'hui à Liège : coucher '+hhmm(t.sunset)+', lever '+hhmm(t.sunrise)+'.';
+}
+function duskTick(){
+  if(!optDusk||!connected||S.status==null)return;
+  const dark=isDark();
+  if(duskDone===dark)return;         // décision déjà prise pour cet état
+  const lampOn=!!(S.status&16);
+  if(dark&&!lampOn){send(CMD.lampOn,'phare allumé (crépuscule)');duskDone=dark;}
+  else if(!dark&&lampOn){send(CMD.lampOff,'phare éteint (lever du jour)');duskDone=dark;}
+  else duskDone=dark;                // déjà dans le bon état
+}
+$('opt-dusk').checked=optDusk;
+$('opt-dusk').onchange=e=>{
+  optDusk=e.target.checked;
+  lsSet('etwow-opt-dusk',optDusk?'1':'0');
+  duskDone=null;
+  ev('phare crépuscule : '+(optDusk?'activé':'désactivé'));
+  if(optDusk)duskTick();
+};
+duskInfo();
+setInterval(()=>{duskTick();duskInfo();},60000);
 
 /* ================= démarrage ================= */
 autoConnect();
