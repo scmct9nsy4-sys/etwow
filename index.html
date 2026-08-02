@@ -26,8 +26,9 @@ body[data-theme="day"]{
   --line2:#8A96A6; --glow:rgba(184,117,0,.28);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
-html,body{background:var(--bg);height:100%;overflow:hidden}
-body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:background .4s,color .4s}
+html,body{background:var(--bg);height:100%}
+html{overflow-y:auto;-webkit-overflow-scrolling:touch}
+body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:background .4s,color .4s;overflow-x:hidden;min-height:calc(100% + 1px)}
 .tile,.switch,#top,#dial{transition:background .4s,border-color .4s}
 
 #app{position:fixed;inset:0;display:flex;flex-direction:column;gap:8px;
@@ -35,7 +36,11 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 #main{flex:1;min-height:0;display:flex;gap:8px}
 
 /* ---------- bandeau supérieur ---------- */
-#top{flex:0 0 46px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 12px}
+/* Le bandeau laisse passer les gestes verticaux : c'est par là que Bluefy
+   révèle ses icônes (plein écran, rechargement). Le reste du cockpit reste
+   insensible au défilement pour ne pas glisser sous le doigt en roulant. */
+#top{flex:0 0 46px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0 12px;touch-action:pan-y}
+#top #brand,#top #lastev,#top #telltales{touch-action:pan-y}
 #brand{font-family:'Chakra Petch';font-weight:700;font-size:15px;letter-spacing:.14em;color:var(--dim);outline:none;border-radius:5px;padding:2px 5px;cursor:text;max-width:150px;white-space:nowrap;overflow:hidden;flex-shrink:0}
 #brand:focus{color:var(--txt);background:var(--panel2);box-shadow:0 0 0 1.5px var(--line2)}
 #lastev{flex:1;min-width:0;font-size:11px;color:var(--faint);letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
@@ -571,10 +576,34 @@ $('btn-trip').onclick=e=>{
 /* ================= écran maintenu allumé ================= */
 let wl=null;
 async function keepAwake(){
+  /* standard, supporté par Chrome */
   try{wl=await navigator.wakeLock.request('screen');}catch(e){}
+  /* API propre à Bluefy (iOS) : empêche l'assombrissement de l'écran */
+  try{
+    if(navigator.bluetooth&&navigator.bluetooth.setScreenDimEnabled)
+      navigator.bluetooth.setScreenDimEnabled(false);
+  }catch(e){}
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&connected)keepAwake();});
+
+/* Bluefy signale le passage en arrière-plan : iOS y suspend la page et la
+   liaison BLE tombe. On le dit franchement plutôt que de laisser croire que
+   la surveillance continue. */
+try{
+  if(navigator.bluetooth&&navigator.bluetooth.addEventListener){
+    navigator.bluetooth.addEventListener('backgroundstatechanged',e=>{
+      const bg=e&&(e.background===true||e.state==='background');
+      if(bg){
+        ev('arrière-plan — surveillance suspendue par iOS');
+        if(typeof alarmOn!=='undefined'&&alarmOn)try{alarmStop();}catch(err){}
+      }else{
+        ev('retour au premier plan');
+        if(connected)keepAwake();
+      }
+    });
+  }
+}catch(e){}
 
 /* ================= nom personnalisé ================= */
 const brand=document.getElementById('brand');
