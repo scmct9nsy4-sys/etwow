@@ -159,6 +159,10 @@ body[data-theme="day"] .seg{box-shadow:none !important}
 .mode.on{transform:translateY(3px);background:var(--amber);border-color:var(--amber);color:var(--on-amber);
   box-shadow:inset 0 3px 6px rgba(0,0,0,.45)}
 .mode.on small{color:var(--on-amber-dim)}
+/* bouton-panneau (fin de limitation) : icône seule, hauteur calée sur les autres */
+.mode{display:flex;align-items:center;justify-content:center}
+.mode.sign{padding:2px 12px}
+.mode.sign svg{width:23px;height:23px;display:block}
 body:not([data-theme="day"]) .mode.on{box-shadow:inset 0 3px 6px rgba(0,0,0,.45), 0 0 12px var(--glow)}
 body[data-theme="day"] .mode.on,body[data-theme="day"] .mode:active{box-shadow:inset 0 3px 6px rgba(0,0,0,.16)}
 #overlay{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 84%,transparent);display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;backdrop-filter:blur(3px);cursor:pointer;z-index:5}
@@ -338,7 +342,7 @@ body:not([data-theme="day"]) .push.on .led{box-shadow:0 0 8px currentColor}
         <button class="mode" data-m="1" title="Mode L1">6<small>km/h</small></button>
         <button class="mode" data-m="2" title="Mode L2">20<small>km/h</small></button>
         <button class="mode" data-m="3" title="Mode L3">25<small>km/h</small></button>
-        <button class="mode" data-m="0" title="Mode L0 — plafond constructeur">no limit</button>
+        <button class="mode sign" data-m="0" title="Mode L0 — fin de limitation, plafond constructeur"><svg viewBox="0 0 24 24" aria-label="Fin de limitation 25"><circle cx="12" cy="12" r="10.2" fill="#F2F3F5" stroke="#4A4E5C" stroke-width="1"/><line x1="4.8" y1="19.2" x2="19.2" y2="4.8" stroke="#22252E" stroke-width="2.6"/><text x="12" y="12.4" text-anchor="middle" dominant-baseline="central" font-family="Chakra Petch" font-weight="700" font-size="9.6" fill="#22252E">25</text></svg></button>
       </div>
       <div id="overlay">
         <p>Trottinette non connectée</p>
