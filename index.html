@@ -5,31 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0B0D10">
+<meta name="theme-color" content="#141931">
 <title>E-TWOW — Cockpit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
 <style>
+/* =================================================================
+   COCKPIT v2 — design « poussoirs rétro » sur logique v1 inchangée.
+   Palette marine inspirée du mode nuit de l'app officielle.
+   Couleurs d'état : phare = bleu, verrou = rouge, départ = ambre.
+   ================================================================= */
 :root{
-  --bg:#0B0D10; --panel:#14181D; --panel2:#1B2129; --line:#242B34;
-  --amber:#FFB000; --amber-dim:#5C4300; --on-amber:#1A1200; --on-amber-dim:#5C4300;
-  --teal:#2AD4A6; --red:#FF453A; --blue:#4DA3FF;
-  --txt:#EDF1F4; --dim:#7A828C; --faint:#3A424C;
-  --line2:#39434F; --glow:rgba(255,176,0,.55);
+  --bg:#141931; --panel:#1B2140; --panel2:#252C4E; --line:#2A3158;
+  --amber:#E09F3E; --amber-dim:#5C4300; --on-amber:#1A1200; --on-amber-dim:#5C4300;
+  --ok:#37C978; --red:#EE5A58; --blue:#5AA5EC;
+  --txt:#E8EAF2; --dim:#8B93B8; --faint:#3A4370;
+  --line2:#4A5482; --glow:rgba(224,159,62,.5);
+  /* poussoirs */
+  --well:#0A0D1C; --face:#2B3358; --face-brd:#4A5482; --edge:#0E1226;
+  --tophi:rgba(255,255,255,.14);
+  /* aiguille phosphore (3 couches) */
+  --nh1:rgba(255,160,40,.16); --nh2:rgba(255,170,60,.38); --ncore:#FFC46B;
+  /* couleurs actives des poussoirs (identiques jour/nuit, halos gérés à part) */
+  --zs-on:#F5B043; --zs-tx:#412402;
+  --ph-on:#5AA5EC; --ph-tx:#042C53;
+  --lk-on:#EE5A58; --lk-tx:#3D0E0E;
 }
 body[data-theme="day"]{
-  --bg:#DFE5EC; --panel:#FFFFFF; --panel2:#EDF1F6; --line:#B9C3D0;
+  --bg:#F1F2F6; --panel:#FFFFFF; --panel2:#EDF0F6; --line:#D5D9E4;
   --amber:#B87500; --amber-dim:#8A5800; --on-amber:#FFFFFF; --on-amber-dim:#FFE9BF;
-  --teal:#0B8A66; --red:#D22F27; --blue:#1668C7;
-  --txt:#10151B; --dim:#4E5866; --faint:#939DAB;
-  --line2:#8A96A6; --glow:rgba(184,117,0,.28);
+  --ok:#0B8A66; --red:#C43331; --blue:#1668C7;
+  --txt:#1C1F2A; --dim:#8A8F9E; --faint:#C6CBD8;
+  --line2:#C2C7D6; --glow:rgba(184,117,0,.25);
+  --well:#D8DBE5; --face:#FDFDFE; --face-brd:#C2C7D6; --edge:#AEB4C6;
+  --tophi:rgba(255,255,255,.9);
+  --nh1:rgba(184,117,0,.10); --nh2:rgba(184,117,0,.22); --ncore:#C77800;
+  --ph-on:#378ADD;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 html,body{background:var(--bg);height:100%}
 html{overflow-y:auto;-webkit-overflow-scrolling:touch}
 body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:background .4s,color .4s;overflow-x:hidden;min-height:calc(100% + 1px)}
-.tile,.switch,#top,#dial{transition:background .4s,border-color .4s}
+/* thème : transition lente (.4s) ; poussoirs : vive (.2s) — pour que la
+   cascade phare→nuit ne fasse pas clignoter l'ensemble (cf. dossier) */
+.tile,.well,#top,#dial{transition:background .4s,border-color .4s}
 
 #app{position:fixed;inset:0;display:flex;flex-direction:column;gap:8px;
   padding:calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));}
@@ -48,7 +68,9 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 .tt{width:28px;height:28px;display:flex;align-items:center;justify-content:center;opacity:.22;transition:opacity .25s,filter .25s}
 .tt svg{width:23px;height:23px}
 .tt.on{opacity:1;filter:drop-shadow(0 0 6px currentColor)}
-#tt-beam{color:var(--amber)} #tt-lock{color:var(--red)} #tt-zs{color:var(--teal)} #tt-ble{color:var(--blue)}
+body[data-theme="day"] .tt.on{filter:none}
+#tt-beam{color:var(--blue)} #tt-lock{color:var(--red)} #tt-zs{color:var(--zs-on)} #tt-ble{color:var(--blue)}
+body[data-theme="day"] #tt-zs{color:var(--amber)}
 #btn-connect{font-family:'Chakra Petch';font-weight:700;font-size:14px;letter-spacing:.08em;background:var(--amber);color:var(--on-amber);border:none;border-radius:9px;padding:8px 15px;cursor:pointer;flex-shrink:0}
 #btn-connect.linked{background:transparent;color:var(--dim);border:1px solid var(--line);font-weight:500}
 #btn-theme{width:40px;height:34px;border-radius:9px;border:1.5px solid var(--line2);background:var(--panel2);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Chakra Petch';font-weight:700;font-size:11px;flex-shrink:0}
@@ -102,17 +124,24 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 #battcard{cursor:pointer}
 
 /* ---------- tuiles d'info (batterie, total, trip, temp) ---------- */
-#stats{display:flex;gap:8px;flex:0 0 136px;flex-direction:column;min-height:0}
-.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 11px;display:flex;flex-direction:column;justify-content:center;gap:3px;position:relative;overflow:hidden;min-width:0;flex:1}
-#battcard{flex:1.5}
+#stats{display:flex;gap:8px;flex:0 0 148px;flex-direction:column;min-height:0}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 11px;display:flex;flex-direction:column;justify-content:center;gap:3px;position:relative;overflow:hidden;min-width:0;flex:1}
+#battcard{flex:1.6}
 .lbl{font-size:11px;font-weight:600;letter-spacing:.16em;color:var(--dim)}
 .big{font-family:'Chakra Petch';font-weight:700;font-size:clamp(19px,4.3vmin,27px);line-height:1;white-space:nowrap}
 .big small{font-size:.5em;color:var(--dim);margin-left:3px;font-family:'Barlow Condensed';font-weight:500}
-.bar{height:8px;border-radius:5px;background:var(--panel2);overflow:hidden;margin-top:4px}
-#battfill{height:100%;width:0%;background:var(--teal);transition:width .6s,background .6s}
 #btn-trip{position:absolute;top:7px;right:7px;font-size:10px;font-weight:700;letter-spacing:.08em;background:var(--panel2);border:1px solid var(--line2);color:var(--dim);border-radius:6px;padding:3px 7px;cursor:pointer;font-family:'Chakra Petch'}
 #btn-trip:active{color:var(--txt);border-color:var(--dim)}
 #tempcard .big{color:var(--dim)}
+
+/* jauge LED rétro : 16 segments dans un rail encastré. Les logements
+   éteints restent visibles — c'est le charme LCD/VU-mètre.
+   Halo nocturne limité aux 3 derniers segments allumés (perf Bluefy). */
+#battrail{display:flex;gap:3px;background:var(--well);border-radius:7px;padding:4px;margin-top:5px;height:20px;transition:background .4s}
+.seg{flex:1;border-radius:2px;background:var(--faint);transition:background .25s}
+body[data-theme="day"] .seg{box-shadow:none !important}
+@keyframes blinkSeg{0%,55%{opacity:1}56%,100%{opacity:.15}}
+.seg.blink{animation:blinkSeg .9s step-end infinite}
 
 /* ---------- cadran central ---------- */
 #dial{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;padding:4px 6px 6px}
@@ -128,28 +157,49 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
 #overlay p{font-size:15px;color:var(--dim);letter-spacing:.06em}
 #btn-big{font-family:'Chakra Petch';font-weight:700;font-size:18px;letter-spacing:.1em;background:var(--amber);color:var(--on-amber);border:none;border-radius:12px;padding:16px 34px;cursor:pointer}
 
-/* ---------- interrupteurs ---------- */
+/* ---------- poussoirs ----------
+   Anatomie : une cuvette (well) plus sombre que le fond, un capuchon (push)
+   surélevé par une tranche de 5 px + liseré clair sur l'arête. Enfoncé :
+   il descend de 4 px, la tranche disparaît, l'ombre passe à l'intérieur.
+   Les témoins (fond coloré + LED) suivent le registre 0x03, jamais le tap. */
 #switches{display:flex;gap:8px;flex:0 0 132px;flex-direction:column;min-height:0}
-.switch{flex:1;display:flex;align-items:center;gap:10px;background:var(--panel);border:1.5px solid var(--line2);border-radius:12px;padding:0 12px;cursor:pointer;position:relative;overflow:hidden;min-width:0;min-height:0}
-.switch:active{background:var(--panel2)}
-.switch .ic{width:30px;height:30px;color:var(--dim);flex-shrink:0;transition:color .25s,filter .25s}
-.switch .ic svg{width:100%;height:100%}
-.switch .tx{display:flex;flex-direction:column;gap:2px;min-width:0}
-.switch .tx b{font-size:15px;font-weight:600;letter-spacing:.06em;white-space:nowrap}
-.switch .tx span{font-size:11.5px;letter-spacing:.1em;color:var(--dim);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.switch .led{position:absolute;right:0;top:0;bottom:0;width:6px;background:var(--faint);transition:background .25s,box-shadow .25s}
-.switch.on .led{box-shadow:0 0 10px currentColor}
-#sw-lamp.on{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,var(--panel))}
-#sw-lamp.on .ic{color:var(--amber)} #sw-lamp.on .led{background:var(--amber);color:var(--amber)}
-#sw-zs.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 12%,var(--panel))}
-#sw-zs.on .ic{color:var(--teal)} #sw-zs.on .led{background:var(--teal);color:var(--teal)}
-#sw-lock.on{border-color:var(--red);background:color-mix(in srgb,var(--red) 12%,var(--panel))}
-#sw-lock.on .ic{color:var(--red)} #sw-lock.on .led{background:var(--red);color:var(--red)}
-#holdbar{position:absolute;left:0;bottom:0;height:3px;width:0%;background:var(--red)}
-.switch[disabled]{opacity:.4;pointer-events:none}
+.swx{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:0}
+.well{border-radius:22px;padding:6px 6px 10px;background:var(--well)}
+.push{width:76px;height:76px;border-radius:17px;position:relative;cursor:pointer;display:block;
+  background:var(--face);border:1px solid var(--face-brd);color:var(--dim);
+  box-shadow:0 5px 0 var(--edge), inset 0 1px 0 var(--tophi);
+  transition:transform .09s, box-shadow .09s, background .2s, border-color .2s, color .2s;overflow:hidden}
+.push:active{transform:translateY(5px);box-shadow:inset 0 4px 8px rgba(0,0,0,.45)}
+.push .led{position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  width:24px;height:5px;border-radius:3px;background:var(--well);transition:background .2s, box-shadow .2s}
+.push .pic{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.push .pic svg{width:34px;height:34px}
+.push .pic.alt{display:none}
+.push.swap .pic.main{display:none}
+.push.swap .pic.alt{display:flex}
+#holdfill{position:absolute;left:0;right:0;bottom:0;height:0%;background:rgba(238,90,88,.35);pointer-events:none}
+.swlab{display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;min-width:0}
+.swlab b{font-size:14px;font-weight:600;letter-spacing:.06em;white-space:nowrap}
+.swlab span{font-size:11px;letter-spacing:.1em;color:var(--dim);font-weight:500;white-space:nowrap}
+.swx[disabled]{opacity:.4;pointer-events:none}
+
+/* états actifs = bouton maintenu enfoncé, face colorée, LED allumée */
+.push.on{transform:translateY(4px);box-shadow:inset 0 4px 8px rgba(0,0,0,.5)}
+body[data-theme="day"] .push.on{box-shadow:inset 0 4px 8px rgba(0,0,0,.18)}
+#sw-zs.on{background:var(--zs-on);border-color:var(--zs-on);color:var(--zs-tx)}
+#sw-zs.on .led{background:var(--zs-tx)}
+#sw-lamp.on{background:var(--ph-on);border-color:var(--ph-on);color:var(--ph-tx)}
+#sw-lamp.on .led{background:var(--ph-tx)}
+#sw-lock.on{background:var(--lk-on);border-color:var(--lk-on);color:var(--lk-tx)}
+#sw-lock.on .led{background:var(--lk-tx)}
+/* halos nocturnes uniquement (langage de nuit — cf. principes du dossier) */
+body:not([data-theme="day"]) #sw-zs.on{box-shadow:inset 0 4px 8px rgba(0,0,0,.5), 0 0 18px 2px rgba(239,159,39,.5)}
+body:not([data-theme="day"]) #sw-lamp.on{box-shadow:inset 0 4px 8px rgba(0,0,0,.5), 0 0 18px 2px rgba(55,138,221,.55)}
+body:not([data-theme="day"]) #sw-lock.on{box-shadow:inset 0 4px 8px rgba(0,0,0,.5), 0 0 18px 2px rgba(226,75,74,.55)}
+body:not([data-theme="day"]) .push.on .led{box-shadow:0 0 8px currentColor}
 
 /* =================================================================
-   PORTRAIT : cadran en haut et pleine largeur, infos et interrupteurs
+   PORTRAIT : cadran en haut et pleine largeur, infos et poussoirs
    en rangées dessous. C'est l'affichage « en main », hors conduite.
    ================================================================= */
 @media (orientation:portrait){
@@ -157,14 +207,13 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
   #dial{order:-1;flex:1}
   #stats{flex:0 0 auto;flex-direction:row}
   #stats .tile,#battcard{flex:1}
+  #battcard{flex:1.4}
   #switches{flex:0 0 auto;flex-direction:row}
   #lastev{display:none}
-  .switch{flex-direction:column;justify-content:center;gap:4px;padding:10px 6px}
-  .switch .tx{align-items:center;text-align:center}
-  .switch .led{left:0;right:0;top:auto;bottom:0;width:auto;height:5px}
   .big{font-size:clamp(17px,5vmin,24px)}
+  #battrail{height:16px}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
@@ -248,7 +297,7 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
       <div class="tile" id="battcard">
         <span class="lbl">BATTERIE</span>
         <div class="big" id="battpct">--<small>%</small></div>
-        <div class="bar"><div id="battfill"></div></div>
+        <div id="battrail"></div>
       </div>
       <div class="tile" id="totalcard">
         <span class="lbl">TOTAL</span>
@@ -283,21 +332,33 @@ body{font-family:'Barlow Condensed',sans-serif;color:var(--txt);transition:backg
     </div>
 
     <div id="switches">
-      <div class="switch" id="sw-lamp" disabled>
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 5c4 0 7 3.1 7 7s-3 7-7 7c-2.5 0-4-1.5-4-3.5v-7C10 6.5 11.5 5 14 5Z"/><path d="M2 7h6M2 12h6M2 17h6"/></svg></div>
-        <div class="tx"><b>Phare</b><span id="st-lamp">éteint</span></div>
-        <div class="led"></div>
+      <!-- Départ : trottinette seule = il faudra pousser (zero start),
+           pilote élancé = départ direct. L'icône EST le message. -->
+      <div class="swx" id="swx-zs" disabled>
+        <div class="well"><button class="push" id="sw-zs" title="Départ direct / kick">
+          <span class="led"></span>
+          <span class="pic main"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.8" cy="19" r="1.9"/><circle cx="19.2" cy="19" r="1.9"/><path d="M6.9 19h6.6"/><path d="M13.5 19 17 7.5"/><path d="M15.4 7.5h3.8"/></svg></span>
+          <span class="pic alt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="4.8" cy="19.2" r="1.8"/><circle cx="19.4" cy="19.2" r="1.8"/><path d="M6.8 19.2h6.8"/><path d="M13.9 19.2 17.4 7.6"/><path d="M15.9 7.6h3.6"/><circle cx="9.8" cy="4.1" r="1.7"/><path d="M9.9 5.9 11.6 11.8"/><path d="M10.5 8 16.6 9.2"/><path d="M11.6 11.8 9.9 18.8"/><path d="M11.6 11.8 13.9 18.8"/></svg></span>
+        </button></div>
+        <div class="swlab"><b>Départ</b><span id="st-zs">--</span></div>
       </div>
-      <div class="switch" id="sw-zs" disabled>
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg></div>
-        <div class="tx"><b>Départ</b><span id="st-zs">--</span></div>
-        <div class="led"></div>
+
+      <div class="swx" id="swx-lamp" disabled>
+        <div class="well"><button class="push" id="sw-lamp" title="Phare">
+          <span class="led"></span>
+          <span class="pic main"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 5c4 0 7 3.1 7 7s-3 7-7 7c-2.5 0-4-1.5-4-3.5v-7C10 6.5 11.5 5 14 5Z"/><path d="M2 7h6M2 12h6M2 17h6"/></svg></span>
+        </button></div>
+        <div class="swlab"><b>Phare</b><span id="st-lamp">éteint</span></div>
       </div>
-      <div class="switch" id="sw-lock" disabled>
-        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
-        <div class="tx"><b>Verrou</b><span id="st-lock">libre</span></div>
-        <div class="led"></div>
-        <div id="holdbar"></div>
+
+      <div class="swx" id="swx-lock" disabled>
+        <div class="well"><button class="push" id="sw-lock" title="Verrou moteur — appui long pour verrouiller">
+          <span class="led"></span>
+          <span class="pic main"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0"/></svg></span>
+          <span class="pic alt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+          <div id="holdfill"></div>
+        </button></div>
+        <div class="swlab"><b>Verrou</b><span id="st-lock">libre</span></div>
       </div>
     </div>
 
@@ -318,6 +379,9 @@ const CAPS={0:41,1:6,2:20,3:25};
 /* bit7 du registre 0x03 : 1 = « départ direct » observé.
    À inverser ici si ton test physique dit le contraire. */
 const ZS_DIRECT_WHEN_BIT7=1;
+/* chiffres de vitesse en rouge à partir de ce seuil (limite légale + 1,
+   pour ne s'allumer que sur dépassement franc, sans papillonner à 25) */
+const RED_AT=26;
 
 const FRAME=(reg,val)=>{const f=[0x55,reg,0x05,val];f.push(f.reduce((a,b)=>a+b)&0xFF);return new Uint8Array(f);};
 const CMD={
@@ -358,14 +422,44 @@ for(let v=0;v<=SCALE_MAX;v++){
   if(maj){const[tx,ty]=pol(a,R-46);
     el('text',{x:tx,y:ty,'font-size':16,'text-anchor':'middle','dominant-baseline':'central','font-family':'Chakra Petch','font-weight':500,style:'fill:var(--dim)'}).textContent=v;}
 }
-const needle=el('g',{style:'transition:transform .28s cubic-bezier(.3,1.2,.4,1);transform-origin:200px 200px'});
-{const p=document.createElementNS(NS,'path');
- p.setAttribute('d',`M 196 210 L 200 ${C-R+34} L 204 210 Z`);
- p.setAttribute('style','fill:var(--amber);filter:drop-shadow(0 0 6px var(--glow))');
- needle.appendChild(p);}
-el('circle',{cx:C,cy:C,r:10,'stroke-width':2,style:'fill:var(--panel2);stroke:var(--faint)'});
-el('text',{id:'speedval',x:C,y:208,'text-anchor':'middle','dominant-baseline':'central','font-family':'Chakra Petch','font-weight':700,'font-size':64,style:'fill:var(--txt)'}).textContent='--';
+/* aiguille phosphore : trois couches concentriques, extrémités arrondies —
+   un cœur ambre vif dans une gaine translucide, comme la rémanence d'un tube.
+   Balayage amorti (.45s) : les trames vitesse arrivent par bonds (~1 cycle/s),
+   l'aiguille doit voyager entre deux valeurs, pas téléporter. */
+const needle=el('g',{style:'transition:transform .45s cubic-bezier(.3,.7,.3,1);transform-origin:200px 200px'});
+{const mk=(w,cls)=>{const l=document.createElementNS(NS,'line');
+   l.setAttribute('x1',200);l.setAttribute('y1',212);
+   l.setAttribute('x2',200);l.setAttribute('y2',74);
+   l.setAttribute('stroke-width',w);l.setAttribute('stroke-linecap','round');
+   l.setAttribute('style','stroke:var('+cls+')');
+   needle.appendChild(l);};
+ mk(12,'--nh1');mk(6,'--nh2');mk(2.6,'--ncore');}
+el('circle',{cx:C,cy:C,r:10,'stroke-width':2,style:'fill:var(--panel2);stroke:var(--line2)'});
+el('circle',{cx:C,cy:C,r:3.4,style:'fill:var(--ncore)'});
+el('text',{id:'speedval',x:C,y:208,'text-anchor':'middle','dominant-baseline':'central','font-family':'Chakra Petch','font-weight':700,'font-size':64,style:'fill:var(--txt);transition:fill .25s'}).textContent='--';
 el('text',{x:C,y:252,'text-anchor':'middle','dominant-baseline':'central','font-family':'Barlow Condensed','font-weight':600,'font-size':16,style:'fill:var(--dim);letter-spacing:3px'}).textContent='KM/H';
+
+/* ================= jauge batterie LED ================= */
+const SEGS=16;
+{const rail=document.getElementById('battrail');
+ for(let i=0;i<SEGS;i++){const s=document.createElement('div');s.className='seg';rail.appendChild(s);}}
+function battZone(b){
+  if(b<=15)return{c:'var(--red)',g:'rgba(226,75,74,.6)'};
+  if(b<=35)return{c:'var(--zs-on)',g:'rgba(239,159,39,.55)'};
+  return{c:'var(--ok)',g:'rgba(55,201,120,.5)'};
+}
+function battRender(){
+  if(S.batt==null)return;
+  const b=Math.max(0,Math.min(100,S.batt)),z=battZone(b);
+  const lit=Math.round(b/100*SEGS),crit=b<=10;
+  document.querySelectorAll('#battrail .seg').forEach((s,i)=>{
+    const on=i<lit||(crit&&i===0&&lit===0);   // à 0 %, un segment clignote encore
+    s.style.background=on?z.c:'var(--faint)';
+    /* halo limité au front lumineux : les 3 derniers segments allumés (perf) */
+    s.style.boxShadow=(on&&i>=lit-3)?'0 0 8px 1px '+z.g:'none';
+    s.classList.toggle('blink',crit&&on);
+  });
+}
 
 /* ================= rendu ================= */
 const $=id=>document.getElementById(id);
@@ -373,12 +467,12 @@ const fmt=v=>v.toFixed(1).replace('.',',');
 function render(){
   const sp=S.stale||S.speed==null?null:S.speed;
   $('speedval').textContent=sp==null?'--':(sp<10?sp.toFixed(1):Math.round(sp));
+  /* chiffres rouges dès RED_AT : l'arc dit où est la zone, le chiffre dit qu'on y est */
+  $('speedval').style.fill=(sp!=null&&sp>=RED_AT)?'var(--red)':'var(--txt)';
   const v=Math.min(sp||0,SCALE_MAX);
   needle.style.transform=`rotate(${vA(v)}deg)`;
   prog.setAttribute('d',v>0?arc(A0,vA(v),R):'');
-  if(S.batt!=null){$('battpct').innerHTML=S.batt+'<small>%</small>';
-    const f=$('battfill');f.style.width=Math.max(0,Math.min(100,S.batt))+'%';
-    f.style.background=S.batt<=20?'var(--red)':S.batt<=45?'var(--amber)':'var(--teal)';}
+  if(S.batt!=null){$('battpct').innerHTML=S.batt+'<small>%</small>';battRender();}
   if(S.odo!=null)$('totalval').innerHTML=fmt(S.odo)+'<small>km</small>';
   if(S.trip!=null)$('tripval').innerHTML=fmt(S.trip)+'<small>km</small>';
   if(S.temp!=null)$('tempval').innerHTML=Math.round(S.temp)+'<small>°C</small>';
@@ -390,8 +484,10 @@ function render(){
     $('sw-lamp').classList.toggle('on',lamp); $('st-lamp').textContent=lamp?'allumé':'éteint';
     $('tt-beam').classList.toggle('on',lamp);
     $('sw-lock').classList.toggle('on',lock); $('st-lock').textContent=lock?'VERROUILLÉ':'libre';
+    $('sw-lock').classList.toggle('swap',!lock);   // cadenas ouvert quand libre
     $('tt-lock').classList.toggle('on',lock);
     $('sw-zs').classList.toggle('on',direct); $('st-zs').textContent=direct?'direct':'kick';
+    $('sw-zs').classList.toggle('swap',direct);    // pilote élancé quand direct
     $('tt-zs').classList.toggle('on',direct);
   }
   applyTheme();
@@ -538,7 +634,7 @@ function uiConn(on){
   $('overlay').classList.toggle('hide',on);
   $('tt-ble').classList.toggle('on',on);
   const b=$('btn-connect');b.textContent=on?'Connecté':'Connecter';b.classList.toggle('linked',on);
-  document.querySelectorAll('.switch').forEach(s=>on?s.removeAttribute('disabled'):s.setAttribute('disabled',''));
+  document.querySelectorAll('.swx').forEach(s=>on?s.removeAttribute('disabled'):s.setAttribute('disabled',''));
 }
 
 /* ================= commandes (les témoins suivent 0x03, jamais le bouton) ================= */
@@ -558,17 +654,18 @@ $('btn-trip').onclick=e=>{
   render();
 };
 
-/* verrou : appui long 0,8 s pour verrouiller — jamais en roulant */
-{const sw=$('sw-lock'),bar=$('holdbar');let t=null,p=0,anim=null;
+/* verrou : appui long 0,8 s pour verrouiller — jamais en roulant.
+   La progression se dessine sur la face du bouton (holdfill monte du bas). */
+{const sw=$('sw-lock'),bar=$('holdfill');let t=null,p=0,anim=null;
  const arm=()=>{
    if(S.status&32){send(CMD.unlock,'moteur libéré');return;}   // déverrouiller : simple appui
-   p=0;bar.style.width='0%';
-   anim=setInterval(()=>{p+=100/8;bar.style.width=Math.min(p,100)+'%';},100);
-   t=setTimeout(()=>{clearInterval(anim);bar.style.width='0%';
+   p=0;bar.style.height='0%';
+   anim=setInterval(()=>{p+=100/8;bar.style.height=Math.min(p,100)+'%';},100);
+   t=setTimeout(()=>{clearInterval(anim);bar.style.height='0%';
      if((S.speed||0)>1){ev('refusé : trottinette en mouvement');return;}
      send(CMD.lock,'moteur verrouillé');},800);
  };
- const disarm=()=>{clearTimeout(t);clearInterval(anim);bar.style.width='0%';};
+ const disarm=()=>{clearTimeout(t);clearInterval(anim);bar.style.height='0%';};
  sw.addEventListener('pointerdown',arm);
  sw.addEventListener('pointerup',disarm);
  sw.addEventListener('pointerleave',disarm);}
