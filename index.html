@@ -178,7 +178,13 @@ body[data-theme="day"] .seg{box-shadow:none !important}
 .push .pic.alt{display:none}
 .push.swap .pic.main{display:none}
 .push.swap .pic.alt{display:flex}
-#holdfill{position:absolute;left:0;right:0;bottom:0;height:0%;background:rgba(238,90,88,.35);pointer-events:none}
+#holdfill{position:absolute;left:0;right:0;bottom:0;height:0%;background:rgba(238,90,88,.55);pointer-events:none}
+/* pendant l'appui long, le bouton répond tout de suite : LED rouge */
+.push.holding .led{background:var(--lk-on)}
+body:not([data-theme="day"]) .push.holding .led{box-shadow:0 0 8px var(--lk-on)}
+/* en attente de confirmation par 0x03 : la LED clignote, la face est déjà colorée */
+@keyframes pendled{0%,60%{opacity:1}61%,100%{opacity:.25}}
+.push.pending .led{animation:pendled .55s step-end infinite}
 .swlab{display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;min-width:0}
 .swlab b{font-size:14px;font-weight:600;letter-spacing:.06em;white-space:nowrap}
 .swlab span{font-size:11px;letter-spacing:.1em;color:var(--dim);font-weight:500;white-space:nowrap}
@@ -383,6 +389,15 @@ const ZS_DIRECT_WHEN_BIT7=1;
 /* chiffres de vitesse en rouge à partir de ce seuil (limite légale + 1,
    pour ne s'allumer que sur dépassement franc, sans papillonner à 25) */
 const RED_AT=26;
+/* durée de l'appui long pour verrouiller (garde-fou : le verrou coupe la
+   puissance dans l'instant, un effleurement ne doit pas pouvoir le poser) */
+const LOCK_HOLD_MS=800;
+/* affichage optimiste (phare, départ) : au tap le bouton prend l'état voulu,
+   la vérité du registre 0x03 tranche ensuite. Fenêtre de grâce : les trames
+   contradictoires sont ignorées ce temps-là (elles peuvent être en retard
+   d'un cycle), au-delà le registre reprend la main. Le verrou est exclu :
+   afficher « verrouillé » sans certitude serait un risque, pas un confort. */
+const PEND_MS=2500;
 
 const FRAME=(reg,val)=>{const f=[0x55,reg,0x05,val];f.push(f.reduce((a,b)=>a+b)&0xFF);return new Uint8Array(f);};
 const CMD={
@@ -403,6 +418,25 @@ let pendingLog=false;     // un relevé attend l'arrivée d'un odomètre frais
 /* trip = total au dernier RAZ ; le contrôleur ne diffuse pas le partiel,
    l'app le reconstruit à partir des variations de l'odomètre total. */
 let tripBase=parseFloat(lsGet('etwow-tripbase')); if(isNaN(tripBase))tripBase=null;
+
+/* ---- état optimiste (phare, départ) ----
+   pend[k] = {want, until} : l'affichage montre `want` jusqu'à confirmation
+   par 0x03 ou expiration de la fenêtre. Une trame qui confirme est adoptée
+   sur-le-champ ; une trame qui contredit est ignorée pendant la fenêtre
+   (elle peut dater d'avant l'application de la commande). */
+const pend={};
+function setPend(k,want){
+  pend[k]={want,until:Date.now()+PEND_MS};
+  render();
+  setTimeout(render,PEND_MS+80);   // pour que l'expiration se voie sans attendre une trame
+}
+function pendVal(k,regv,label){
+  const p=pend[k];
+  if(!p)return regv;
+  if(regv===p.want){delete pend[k];return regv;}                     // confirmé
+  if(Date.now()>p.until){delete pend[k];ev(label+' : commande restée sans effet');return regv;}
+  return p.want;                                                     // fenêtre de grâce
+}
 
 /* ================= cadran SVG ================= */
 const NS='http://www.w3.org/2000/svg';
@@ -478,16 +512,19 @@ function render(){
   if(S.trip!=null)$('tripval').innerHTML=fmt(S.trip)+'<small>km</small>';
   if(S.temp!=null)$('tempval').innerHTML=Math.round(S.temp)+'<small>°C</small>';
   if(S.status!=null){
-    const st=S.status,mode=st&3,lamp=!!(st&16),lock=!!(st&32),
-      direct=((st>>7)&1)===ZS_DIRECT_WHEN_BIT7;
+    const st=S.status,mode=st&3,lock=!!(st&32);
+    const lamp=pendVal('lamp',!!(st&16),'phare');
+    const direct=pendVal('zs',((st>>7)&1)===ZS_DIRECT_WHEN_BIT7,'départ');
     document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('on',+b.dataset.m===mode));
     redline.setAttribute('d',arc(vA(CAPS[mode]),A1,R));
     $('sw-lamp').classList.toggle('on',lamp); $('st-lamp').textContent=lamp?'allumé':'éteint';
+    $('sw-lamp').classList.toggle('pending',!!pend.lamp);
     $('tt-beam').classList.toggle('on',lamp);
     $('sw-lock').classList.toggle('on',lock); $('st-lock').textContent=lock?'VERROUILLÉ':'libre';
     $('sw-lock').classList.toggle('swap',!lock);   // cadenas ouvert quand libre
     $('tt-lock').classList.toggle('on',lock);
     $('sw-zs').classList.toggle('on',direct); $('st-zs').textContent=direct?'direct':'kick';
+    $('sw-zs').classList.toggle('pending',!!pend.zs);
     $('sw-zs').classList.toggle('swap',direct);    // pilote élancé quand direct
     $('tt-zs').classList.toggle('on',direct);
   }
@@ -643,10 +680,11 @@ $('btn-connect').onclick=()=>{if(!connected)connect();};
 $('btn-big').onclick=e=>{e.stopPropagation();connect();};
 $('overlay').onclick=connect;
 document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>send(CMD.mode(+b.dataset.m),'mode L'+b.dataset.m));
-$('sw-lamp').onclick=()=>{const on=!!(S.status&16);send(on?CMD.lampOff:CMD.lampOn,on?'phare éteint':'phare allumé');};
+$('sw-lamp').onclick=()=>{const on=!!(S.status&16);send(on?CMD.lampOff:CMD.lampOn,on?'phare éteint':'phare allumé');setPend('lamp',!on);};
 $('sw-zs').onclick=()=>{
   const direct=((S.status>>7)&1)===ZS_DIRECT_WHEN_BIT7;
-  send(direct?CMD.zsOn:CMD.zsOff,direct?'départ kick':'départ direct');};
+  send(direct?CMD.zsOn:CMD.zsOff,direct?'départ kick':'départ direct');
+  setPend('zs',!direct);};
 /* RAZ trip : remet le partiel calculé à zéro et resynchronise le guidon */
 $('btn-trip').onclick=e=>{
   e.stopPropagation();
@@ -665,15 +703,15 @@ $('btn-trip').onclick=e=>{
    if(e&&e.pointerId!=null){try{sw.setPointerCapture(e.pointerId);}catch(err){}}
    if(e&&e.cancelable)e.preventDefault();
    if(S.status&32){send(CMD.unlock,'moteur libéré');return;}   // déverrouiller : simple appui
-   held=true;p=0;bar.style.height='0%';
-   anim=setInterval(()=>{p+=100/8;bar.style.height=Math.min(p,100)+'%';},100);
-   t=setTimeout(()=>{held=false;clearInterval(anim);bar.style.height='0%';
+   held=true;p=0;bar.style.height='0%';sw.classList.add('holding');
+   anim=setInterval(()=>{p+=100/(LOCK_HOLD_MS/100);bar.style.height=Math.min(p,100)+'%';},100);
+   t=setTimeout(()=>{held=false;clearInterval(anim);bar.style.height='0%';sw.classList.remove('holding');
      if((S.speed||0)>1){ev('refusé : trottinette en mouvement');return;}
-     send(CMD.lock,'moteur verrouillé');},800);
+     send(CMD.lock,'moteur verrouillé');},LOCK_HOLD_MS);
  };
  const disarm=()=>{
-   if(held){ev('verrou : appui relâché avant 0,8 s');held=false;}
-   clearTimeout(t);clearInterval(anim);bar.style.height='0%';};
+   if(held){ev('verrou : appui relâché avant '+(LOCK_HOLD_MS/1000).toFixed(1).replace('.',',')+' s');held=false;}
+   clearTimeout(t);clearInterval(anim);bar.style.height='0%';sw.classList.remove('holding');};
  sw.addEventListener('pointerdown',arm);
  sw.addEventListener('pointerup',disarm);
  sw.addEventListener('pointercancel',disarm);}
