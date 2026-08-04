@@ -166,6 +166,7 @@ body[data-theme="day"] .seg{box-shadow:none !important}
 .swx{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:0}
 .well{border-radius:22px;padding:6px 6px 10px;background:var(--well)}
 .push{width:76px;height:76px;border-radius:17px;position:relative;cursor:pointer;display:block;
+  -webkit-touch-callout:none;
   background:var(--face);border:1px solid var(--face-brd);color:var(--dim);
   box-shadow:0 5px 0 var(--edge), inset 0 1px 0 var(--tophi);
   transition:transform .09s, box-shadow .09s, background .2s, border-color .2s, color .2s;overflow:hidden}
@@ -655,20 +656,27 @@ $('btn-trip').onclick=e=>{
 };
 
 /* verrou : appui long 0,8 s pour verrouiller — jamais en roulant.
-   La progression se dessine sur la face du bouton (holdfill monte du bas). */
-{const sw=$('sw-lock'),bar=$('holdfill');let t=null,p=0,anim=null;
- const arm=()=>{
+   La progression se dessine sur la face du bouton (holdfill monte du bas).
+   Capture du pointeur obligatoire : l'enfoncement (translateY) déplace le
+   bouton sous le doigt, sans capture le navigateur émet un pointerleave
+   qui désarmait l'appui. pointercancel couvre le callout iOS. */
+{const sw=$('sw-lock'),bar=$('holdfill');let t=null,p=0,anim=null,held=false;
+ const arm=e=>{
+   if(e&&e.pointerId!=null){try{sw.setPointerCapture(e.pointerId);}catch(err){}}
+   if(e&&e.cancelable)e.preventDefault();
    if(S.status&32){send(CMD.unlock,'moteur libéré');return;}   // déverrouiller : simple appui
-   p=0;bar.style.height='0%';
+   held=true;p=0;bar.style.height='0%';
    anim=setInterval(()=>{p+=100/8;bar.style.height=Math.min(p,100)+'%';},100);
-   t=setTimeout(()=>{clearInterval(anim);bar.style.height='0%';
+   t=setTimeout(()=>{held=false;clearInterval(anim);bar.style.height='0%';
      if((S.speed||0)>1){ev('refusé : trottinette en mouvement');return;}
      send(CMD.lock,'moteur verrouillé');},800);
  };
- const disarm=()=>{clearTimeout(t);clearInterval(anim);bar.style.height='0%';};
+ const disarm=()=>{
+   if(held){ev('verrou : appui relâché avant 0,8 s');held=false;}
+   clearTimeout(t);clearInterval(anim);bar.style.height='0%';};
  sw.addEventListener('pointerdown',arm);
  sw.addEventListener('pointerup',disarm);
- sw.addEventListener('pointerleave',disarm);}
+ sw.addEventListener('pointercancel',disarm);}
 
 /* ================= écran maintenu allumé ================= */
 let wl=null;
